@@ -40,7 +40,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <div className="flex flex-col gap-6">
       {/* Welcome Header */}
       <header className="flex flex-col gap-1.5">
         <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
@@ -123,7 +123,7 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
             <h2 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
               <Coffee className="size-5 text-secondary" />
-              Tomorrow's Breakfast
+              Tomorrow&apos;s Breakfast
             </h2>
             <Link href="/meals" className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5">
               Preferences <ChevronRight className="size-3" />

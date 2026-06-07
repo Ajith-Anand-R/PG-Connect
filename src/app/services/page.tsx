@@ -1,21 +1,18 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useApp, ServiceRequest } from '@/context/AppContext';
+import { useApp } from '@/context/AppContext';
 import { 
   Wrench, 
   Wifi, 
   Sparkles, 
   Zap, 
   FileText, 
-  Clock, 
   CheckCircle2, 
   Info, 
   Plus, 
   Star, 
-  Image as ImageIcon,
-  MessageSquare,
-  AlertCircle
+  Image as ImageIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,7 +25,6 @@ import {
   DialogFooter, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger,
   DialogClose
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -169,14 +165,14 @@ export default function ServicesPage() {
                 <div>
                   <h3 className="font-semibold text-slate-900 dark:text-white">No Active Tickets</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-[280px]">
-                    Everything in your room is in top shape! Click "Raise Request" if you need anything fixed.
+                    Everything in your room is in top shape! Click &quot;Raise Request&quot; if you need anything fixed.
                   </p>
                 </div>
               </CardContent>
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {activeRequests.map((req, index) => {
+              {activeRequests.map((req) => {
                 const isPlumbing = req.category.toLowerCase() === 'plumbing';
                 const progressWidth = req.status === 'Open' ? '15%' : '50%';
                 

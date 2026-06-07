@@ -6,13 +6,9 @@ import {
   UserCheck, 
   Plus, 
   QrCode, 
-  Calendar, 
   Clock, 
   User, 
-  Trash2, 
   ExternalLink,
-  CheckCircle2,
-  AlertTriangle,
   History,
   Check,
   Share2
@@ -27,7 +23,6 @@ import {
   DialogFooter, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger,
   DialogClose
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -124,7 +119,7 @@ export default function GuestPassPage() {
               <div>
                 <h3 className="font-semibold text-slate-900 dark:text-white">No Active Passes</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-[280px]">
-                  You don't have any pre-approved guests registered for today.
+                  You don&apos;t have any pre-approved guests registered for today.
                 </p>
               </div>
             </CardContent>

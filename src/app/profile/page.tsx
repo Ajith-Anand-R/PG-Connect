@@ -5,10 +5,6 @@ import { useApp } from '@/context/AppContext';
 import { 
   User, 
   QrCode, 
-  Mail, 
-  Phone, 
-  ShieldAlert, 
-  CalendarDays, 
   FileText, 
   Scale, 
   LogOut,
@@ -19,7 +15,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { 
   Dialog, 
   DialogContent, 
@@ -27,7 +22,6 @@ import {
   DialogFooter, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger,
   DialogClose
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';

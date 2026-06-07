@@ -19,7 +19,7 @@ export default function MealsPage() {
   const { meals, updateMeals, updateDietary } = useApp();
   const [selectedDay, setSelectedDay] = useState<'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat'>('Tue');
 
-  const days = [
+  const days: { name: 'Tue' | 'Wed' | 'Thu' | 'Fri' | 'Sat'; num: number; active: boolean }[] = [
     { name: 'Tue', num: 24, active: true },
     { name: 'Wed', num: 25, active: true },
     { name: 'Thu', num: 26, active: true },
@@ -49,7 +49,7 @@ export default function MealsPage() {
 
       {/* Today's Meal Presence Toggles */}
       <div className="flex flex-col gap-3">
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Today's Presence</h2>
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Today&apos;s Presence</h2>
         <div className="grid grid-cols-1 gap-3">
           {/* Breakfast */}
           <div 
@@ -160,7 +160,7 @@ export default function MealsPage() {
                 <button
                   key={day.name}
                   type="button"
-                  onClick={() => setSelectedDay(day.name as any)}
+                  onClick={() => setSelectedDay(day.name)}
                   className={`flex flex-col items-center p-3 rounded-xl min-w-[64px] border transition-all active:scale-95 ${
                     isSelected
                       ? 'bg-primary/10 text-primary border-primary/20 shadow-sm'

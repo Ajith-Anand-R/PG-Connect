@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useApp, ChatThread } from '@/context/AppContext';
+import { useApp } from '@/context/AppContext';
 import { 
   MessageSquare, 
   Send, 
@@ -9,12 +9,10 @@ import {
   Plus, 
   Users, 
   ChevronRight,
-  Info,
   Phone,
   Video
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { 
   Dialog, 
@@ -23,7 +21,6 @@ import {
   DialogFooter, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger,
   DialogClose
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';

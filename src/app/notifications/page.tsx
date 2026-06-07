@@ -7,11 +7,9 @@ import {
   Wrench, 
   CreditCard, 
   Volume2,
-  Trash2,
   Droplet,
   Package,
   Check,
-  CheckCircle,
   BellRing
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

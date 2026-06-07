@@ -6,13 +6,10 @@ import {
   Volume2, 
   MessageSquare, 
   Plus, 
-  Filter, 
   Heart, 
   Send,
-  Calendar,
   AlertTriangle,
   ShoppingBag,
-  ArrowRight,
   Info,
   ChevronRight,
   Image as ImageIcon
@@ -20,7 +17,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { 
   Dialog, 
   DialogContent, 
@@ -28,7 +24,6 @@ import {
   DialogFooter, 
   DialogHeader, 
   DialogTitle, 
-  DialogTrigger,
   DialogClose
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';

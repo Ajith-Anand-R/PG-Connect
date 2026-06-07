@@ -124,18 +124,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // check if user was logged in previously on client side
   useEffect(() => {
-    const stored = localStorage.getItem('pg_connect_logged_in');
-    if (stored === 'true') {
-      setIsLoggedIn(true);
-    }
-    const storedTenant = localStorage.getItem('pg_connect_tenant');
-    if (storedTenant) {
-      try {
-        setTenant(JSON.parse(storedTenant));
-      } catch (e) {}
-    }
+    const checkAuth = () => {
+      const stored = localStorage.getItem('pg_connect_logged_in');
+      if (stored === 'true') {
+        setIsLoggedIn(true);
+      }
+      const storedTenant = localStorage.getItem('pg_connect_tenant');
+      if (storedTenant) {
+        try {
+          setTenant(JSON.parse(storedTenant));
+        } catch {}
+      }
+    };
+    setTimeout(checkAuth, 0);
   }, []);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const login = (emailOrPhone: string) => {
     setIsLoggedIn(true);
     localStorage.setItem('pg_connect_logged_in', 'true');

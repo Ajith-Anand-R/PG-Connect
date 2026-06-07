@@ -16,13 +16,12 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
+  // Clear all caches on activation to prevent stale code issues during development/updates
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            return caches.delete(cache);
-          }
+          return caches.delete(cache);
         })
       );
     })
@@ -31,6 +30,11 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  // Disable service worker caching on localhost/development
+  if (self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1') {
+    return;
+  }
+
   // Only handle GET requests and skip chrome-extension/etc schemes
   if (event.request.method !== 'GET' || !event.request.url.startsWith(self.location.origin)) {
     return;

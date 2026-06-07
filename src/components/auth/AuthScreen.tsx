@@ -14,7 +14,7 @@ import {
   Building2,
   ChevronDown
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+
 
 export const AuthScreen: React.FC = () => {
   const { login, register } = useApp();
@@ -92,17 +92,11 @@ export const AuthScreen: React.FC = () => {
       </div>
 
       <div className="w-full max-w-5xl my-auto z-10 flex flex-col items-center">
-        <AnimatePresence mode="wait">
-          {isLogin ? (
-            /* --- LOGIN SCREEN --- */
-            <motion.div
-              key="login-container"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.4, ease: "easeInOut" }}
-              className="w-full max-w-[420px] flex flex-col items-center"
-            >
+        {isLogin ? (
+          /* --- LOGIN SCREEN --- */
+          <div
+            className="w-full max-w-[420px] flex flex-col items-center"
+          >
               {/* Brand Header */}
               <div className="mb-8 flex flex-col items-center text-center">
                 <div className="relative mb-4 flex items-center justify-center">
@@ -130,13 +124,11 @@ export const AuthScreen: React.FC = () => {
               <div className="w-full bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-6 md:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-all duration-300 hover:shadow-[0_8px_40px_rgba(0,0,0,0.08)]">
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
                   {error && (
-                    <motion.div 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-xs font-semibold p-3.5 rounded-xl"
+                    <div 
+                      className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-xs font-semibold p-3.5 rounded-xl animate-in fade-in duration-200"
                     >
                       {error}
-                    </motion.div>
+                    </div>
                   )}
 
                   {/* Email/Phone Field */}
@@ -252,7 +244,7 @@ export const AuthScreen: React.FC = () => {
 
               {/* Call-to-action Footer */}
               <p className="mt-6 text-xs text-slate-600 dark:text-slate-400 font-medium">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <button 
                   onClick={toggleMode}
                   className="text-blue-600 dark:text-blue-400 font-bold hover:underline transition-colors ml-1"
@@ -268,15 +260,10 @@ export const AuthScreen: React.FC = () => {
                 <span>•</span>
                 <a className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors" href="#">Terms of Service</a>
               </div>
-            </motion.div>
+            </div>
           ) : (
             /* --- REGISTRATION SCREEN --- */
-            <motion.div
-              key="register-container"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.4, ease: "easeInOut" }}
+            <div
               className="w-full max-w-4xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.04)] dark:shadow-[0_30px_60px_rgba(0,0,0,0.3)] grid grid-cols-1 md:grid-cols-12 min-h-[580px] transition-all"
             >
               {/* Left Column: Visual/Brand Content (Desktop only) */}
@@ -330,13 +317,11 @@ export const AuthScreen: React.FC = () => {
 
                 <form onSubmit={handleRegisterSubmit} className="space-y-4">
                   {error && (
-                    <motion.div 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-xs font-semibold p-3 rounded-xl"
+                    <div 
+                      className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 text-xs font-semibold p-3 rounded-xl animate-in fade-in duration-200"
                     >
                       {error}
-                    </motion.div>
+                    </div>
                   )}
 
                   {/* Full Name */}
@@ -488,9 +473,8 @@ export const AuthScreen: React.FC = () => {
                   </p>
                 </div>
               </div>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
       </div>
 
       {/* Persistent Footer copyright */}
