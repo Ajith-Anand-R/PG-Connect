@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#002266" />
+      <stop offset="100%" stop-color="#0052cc" />
+    </linearGradient>
+    <linearGradient id="glyphGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#e2e8f0" />
+    </linearGradient>
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.25" />
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="192" height="192" rx="42" fill="url(#bgGrad)" />
+  
+  <!-- Icon Symbol (T-Link-Home Glyph) -->
+  <g filter="url(#dropShadow)" fill="url(#glyphGrad)">
+    <!-- House Roof -->
+    <path d="M96 46 L50 82 L62 82 L62 136 C62 140 66 144 70 144 L122 144 C126 144 130 140 130 136 L130 82 L142 82 Z" />
+    <!-- T-Link Cutout / Path -->
+    <path d="M88 74 L104 74 L104 100 L118 100 L118 114 L104 114 L104 132 L88 132 L88 114 L74 114 L74 100 L88 100 Z" fill="#0052cc" />
+  </g>
+</svg>

@@ -1,65 +1,247 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { useApp } from '@/context/AppContext';
+import { 
+  Wallet, 
+  Bolt, 
+  CheckCircle2, 
+  Coffee, 
+  Wrench, 
+  UtensilsCrossed, 
+  MessageSquare, 
+  UserCheck,
+  ChevronRight,
+  Clock
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
+export default function DashboardPage() {
+  const { tenant, bills, requests, payBill } = useApp();
+  const [isPaying, setIsPaying] = useState(false);
+
+  // Find electricity bill (id: bill-1)
+  const electricityBill = bills.find(b => b.id === 'bill-1');
+  // Find paid rent (id: bill-2)
+  const rentBill = bills.find(b => b.id === 'bill-2');
+  // Open tickets
+  const activeRequests = requests.filter(r => r.status !== 'Resolved');
+
+  const handlePay = () => {
+    setIsPaying(true);
+    // Simulate slight lag for visual feedback (Tactile feedback rule)
+    setTimeout(() => {
+      payBill('bill-1');
+      setIsPaying(false);
+    }, 1200);
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+      {/* Welcome Header */}
+      <header className="flex flex-col gap-1.5">
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          Good Morning, {tenant.name.split(' ')[0]} 👋
+        </h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Welcome to your portal. Here is your stay status today.
+        </p>
+      </header>
+
+      {/* Bento Grid Elements */}
+      {/* 1. Financial Overview */}
+      <Card className="border-slate-100 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-md transition-shadow duration-300">
+        <CardContent className="p-5 flex flex-col gap-4">
+          <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+            <h2 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+              <Wallet className="size-5 text-primary" />
+              Financial Overview
+            </h2>
+            <Link href="/payments" className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5">
+              History <ChevronRight className="size-3" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Rent Paid Card */}
+            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 flex flex-col justify-between min-h-[110px]">
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">November Rent</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">${rentBill?.amount.toLocaleString()}</p>
+              </div>
+              <div className="mt-3 inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold px-2.5 py-1 rounded-full w-max">
+                <CheckCircle2 className="size-3.5" />
+                Paid Successfully
+              </div>
+            </div>
+
+            {/* Utility Bill Card */}
+            <div className={`rounded-xl p-4 flex flex-col justify-between min-h-[110px] border transition-colors ${
+              electricityBill?.status === 'Paid' 
+                ? 'bg-slate-50 dark:bg-slate-900/50 border-transparent' 
+                : 'bg-destructive/5 dark:bg-destructive/10 border-destructive/10'
+            }`}>
+              <div>
+                <div className="flex justify-between items-start">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Electricity Bill</p>
+                  {electricityBill?.status !== 'Paid' && <Bolt className="size-4 text-destructive animate-pulse" />}
+                </div>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">${electricityBill?.amount}</p>
+                <p className={`text-[10px] mt-1 ${
+                  electricityBill?.status === 'Paid' ? 'text-slate-500' : 'text-destructive font-semibold'
+                }`}>
+                  {electricityBill?.status === 'Paid' ? 'No outstanding dues' : 'Due in 3 days'}
+                </p>
+              </div>
+
+              {electricityBill?.status !== 'Paid' ? (
+                <Button 
+                  size="sm" 
+                  className="mt-3 w-full bg-primary font-semibold text-xs transition-transform active:scale-[0.98]" 
+                  onClick={handlePay}
+                  disabled={isPaying}
+                >
+                  {isPaying ? 'Processing...' : 'Pay Now'}
+                </Button>
+              ) : (
+                <div className="mt-3 inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold px-2.5 py-1 rounded-full w-max">
+                  <CheckCircle2 className="size-3.5" />
+                  Paid Successfully
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 2. Meal Status Card */}
+      <Card className="border-slate-100 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-md transition-shadow duration-300">
+        <CardContent className="p-5 flex flex-col gap-4">
+          <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+            <h2 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+              <Coffee className="size-5 text-secondary" />
+              Tomorrow's Breakfast
+            </h2>
+            <Link href="/meals" className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5">
+              Preferences <ChevronRight className="size-3" />
+            </Link>
+          </div>
+
+          <div className="bg-secondary/10 dark:bg-secondary/20 rounded-xl p-4 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center text-secondary flex-shrink-0">
+              <UtensilsCrossed className="size-5" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                Masala Dosa, Sambar, Chutney & Filter Coffee
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Served 7:30 AM - 9:30 AM • Vegetarian
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 3. Quick Actions Menu */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Action 1: Raise Request */}
+        <Link 
+          href="/services" 
+          className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center gap-2.5 hover:bg-slate-50 dark:hover:bg-slate-900/80 transition-all active:scale-[0.98] group"
+        >
+          <div className="w-12 h-12 rounded-full bg-secondary/15 flex items-center justify-center text-secondary group-hover:bg-secondary/25 transition-colors">
+            <Wrench className="size-5" />
+          </div>
+          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 text-center">
+            Raise Request
+          </span>
+        </Link>
+
+        {/* Action 2: Meal Management */}
+        <Link 
+          href="/meals" 
+          className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center gap-2.5 hover:bg-slate-50 dark:hover:bg-slate-900/80 transition-all active:scale-[0.98] group"
+        >
+          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary/20 transition-colors">
+            <Coffee className="size-5" />
+          </div>
+          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 text-center">
+            Meals Portal
+          </span>
+        </Link>
+
+        {/* Action 3: Community Board */}
+        <Link 
+          href="/community" 
+          className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center gap-2.5 hover:bg-slate-50 dark:hover:bg-slate-900/80 transition-all active:scale-[0.98] group"
+        >
+          <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-orange-700 dark:text-orange-400 group-hover:bg-slate-200 dark:group-hover:bg-slate-800 transition-colors">
+            <MessageSquare className="size-5" />
+          </div>
+          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 text-center">
+            Community Board
+          </span>
+        </Link>
+
+        {/* Action 4: Guest Pass */}
+        <Link 
+          href="/guest-pass" 
+          className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center gap-2.5 hover:bg-slate-50 dark:hover:bg-slate-900/80 transition-all active:scale-[0.98] group"
+        >
+          <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-500/20 transition-colors">
+            <UserCheck className="size-5" />
+          </div>
+          <span className="text-sm font-semibold text-slate-800 dark:text-slate-200 text-center">
+            Guest Pass
+          </span>
+        </Link>
+      </div>
+
+      {/* 4. Active Service Tickets */}
+      <Card className="border-slate-100 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]">
+        <CardContent className="p-5 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold text-lg text-slate-900 dark:text-white">Active Requests</h2>
+            <Badge variant="secondary" className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              {activeRequests.length} Open
+            </Badge>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {activeRequests.map((req) => (
+              <div 
+                key={req.id} 
+                className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:bg-slate-100/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-slate-200/50 dark:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300">
+                    <Wrench className="size-4.5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                      {req.title}
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Ticket #{req.id.toUpperCase().slice(0, 8)} • Raised {req.raisedDate}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/10 border-transparent text-[10px] font-semibold flex items-center gap-1 py-0.5 px-2">
+                    <Clock className="size-3" />
+                    In Progress
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
