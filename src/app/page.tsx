@@ -72,55 +72,66 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Rent Paid Card */}
-            <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 flex flex-col justify-between min-h-[110px]">
-              <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{rentBill ? rentBill.title : 'Rent'}</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">${rentBill?.amount ? rentBill.amount.toLocaleString() : '0'}</p>
-              </div>
-              <div className="mt-3 inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold px-2.5 py-1 rounded-full w-max">
-                <CheckCircle2 className="size-3.5" />
-                Paid Successfully
-              </div>
+          {bills.length === 0 ? (
+            <div className="bg-slate-50/50 dark:bg-slate-900/40 rounded-2xl p-6 text-center text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800/60">
+              <p className="text-sm font-semibold">No pending payments</p>
+              <p className="text-[11px] mt-1 text-slate-400 dark:text-slate-500">You are all caught up! There are no outstanding rents or utility bills.</p>
             </div>
-
-            {/* Utility Bill Card */}
-            <div className={`rounded-xl p-4 flex flex-col justify-between min-h-[110px] border transition-colors ${
-              electricityBill?.status === 'Paid' 
-                ? 'bg-slate-50 dark:bg-slate-900/50 border-transparent' 
-                : 'bg-destructive/5 dark:bg-destructive/10 border-destructive/10'
-            }`}>
-              <div>
-                <div className="flex justify-between items-start">
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{electricityBill ? electricityBill.title : 'Electricity Bill'}</p>
-                  {electricityBill?.status !== 'Paid' && <Bolt className="size-4 text-destructive animate-pulse" />}
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Rent Paid Card */}
+              {rentBill && (
+                <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 flex flex-col justify-between min-h-[110px]">
+                  <div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{rentBill.title}</p>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-white">${rentBill.amount.toLocaleString()}</p>
+                  </div>
+                  <div className="mt-3 inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold px-2.5 py-1 rounded-full w-max">
+                    <CheckCircle2 className="size-3.5" />
+                    Paid Successfully
+                  </div>
                 </div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">${electricityBill?.amount ?? '0'}</p>
-                <p className={`text-[10px] mt-1 ${
-                  electricityBill?.status === 'Paid' ? 'text-slate-500' : 'text-destructive font-semibold'
-                }`}>
-                  {electricityBill?.status === 'Paid' ? 'No outstanding dues' : (electricityBill?.dueDate || 'Due soon')}
-                </p>
-              </div>
+              )}
 
-              {electricityBill?.status !== 'Paid' ? (
-                <Button 
-                  size="sm" 
-                  className="mt-3 w-full bg-primary font-semibold text-xs transition-transform active:scale-[0.98]" 
-                  onClick={handlePay}
-                  disabled={isPaying}
-                >
-                  {isPaying ? 'Processing...' : 'Pay Now'}
-                </Button>
-              ) : (
-                <div className="mt-3 inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold px-2.5 py-1 rounded-full w-max">
-                  <CheckCircle2 className="size-3.5" />
-                  Paid Successfully
+              {/* Utility Bill Card */}
+              {electricityBill && (
+                <div className={`rounded-xl p-4 flex flex-col justify-between min-h-[110px] border transition-colors ${
+                  electricityBill.status === 'Paid' 
+                    ? 'bg-slate-50 dark:bg-slate-900/50 border-transparent' 
+                    : 'bg-destructive/5 dark:bg-destructive/10 border-destructive/10'
+                }`}>
+                  <div>
+                    <div className="flex justify-between items-start">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{electricityBill.title}</p>
+                      {electricityBill.status !== 'Paid' && <Bolt className="size-4 text-destructive animate-pulse" />}
+                    </div>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-white">${electricityBill.amount}</p>
+                    <p className={`text-[10px] mt-1 ${
+                      electricityBill.status === 'Paid' ? 'text-slate-500' : 'text-destructive font-semibold'
+                    }`}>
+                      {electricityBill.status === 'Paid' ? 'No outstanding dues' : electricityBill.dueDate}
+                    </p>
+                  </div>
+
+                  {electricityBill.status !== 'Paid' ? (
+                    <Button 
+                      size="sm" 
+                      className="mt-3 w-full bg-primary font-semibold text-xs transition-transform active:scale-[0.98]" 
+                      onClick={handlePay}
+                      disabled={isPaying}
+                    >
+                      {isPaying ? 'Processing...' : 'Pay Now'}
+                    </Button>
+                  ) : (
+                    <div className="mt-3 inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold px-2.5 py-1 rounded-full w-max">
+                      <CheckCircle2 className="size-3.5" />
+                      Paid Successfully
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
@@ -219,33 +230,40 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex flex-col gap-3">
-            {activeRequests.map((req) => (
-              <div 
-                key={req.id} 
-                className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:bg-slate-100/50 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-slate-200/50 dark:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300">
-                    <Wrench className="size-4.5" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-                      {req.title}
-                    </h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      Ticket #{req.id.toUpperCase().slice(0, 8)} • Raised {req.raisedDate}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/10 border-transparent text-[10px] font-semibold flex items-center gap-1 py-0.5 px-2">
-                    <Clock className="size-3" />
-                    In Progress
-                  </Badge>
-                </div>
+            {activeRequests.length === 0 ? (
+              <div className="bg-slate-50/40 dark:bg-slate-900/20 rounded-xl p-6 text-center text-slate-500 dark:text-slate-400 border border-slate-100/60 dark:border-slate-800/40">
+                <p className="text-xs font-semibold">No active service requests</p>
+                <p className="text-[10px] mt-0.5 text-slate-400 dark:text-slate-500">Everything is in top shape!</p>
               </div>
-            ))}
+            ) : (
+              activeRequests.map((req) => (
+                <div 
+                  key={req.id} 
+                  className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:bg-slate-100/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-slate-200/50 dark:bg-slate-800 rounded-lg text-slate-600 dark:text-slate-300">
+                      <Wrench className="size-4.5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {req.title}
+                      </h3>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Ticket #{req.id.toUpperCase().slice(0, 8)} • Raised {req.raisedDate}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-orange-500/10 text-orange-600 hover:bg-orange-500/10 border-transparent text-[10px] font-semibold flex items-center gap-1 py-0.5 px-2">
+                      <Clock className="size-3" />
+                      In Progress
+                    </Badge>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
