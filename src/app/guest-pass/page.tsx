@@ -43,11 +43,7 @@ export default function GuestPassPage() {
   const [exitTime, setExitTime] = useState('22:00');
 
   // Hardcoded historical passes to match the exact designs
-  const historyPasses = [
-    { id: 'h-1', visitorName: 'Michael Johnson', relationship: 'Friend', phone: '+1 (555) 882-9912', date: 'Oct 12, 2026', status: 'Expired', type: 'Day Pass' },
-    { id: 'h-2', visitorName: 'Emily Davis', relationship: 'Sister', phone: '+1 (555) 221-4828', date: 'Oct 05, 2026', status: 'Used', type: 'Overnight Parking' },
-    { id: 'h-3', visitorName: 'Robert Wilson', relationship: 'Delivery', phone: '+1 (555) 392-1823', date: 'Sep 28, 2026', status: 'Revoked', type: 'Weekend Access' },
-  ];
+  const historyPasses: { id: string; visitorName: string; relationship: string; phone: string; date: string; status: string; type: string }[] = [];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,17 +82,17 @@ export default function GuestPassPage() {
       </div>
 
       {/* Hero Invitation Banner */}
-      <div className="bg-primary text-white rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-5">
+      <div className="bg-primary text-primary-foreground rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-5">
         <div className="absolute inset-0 opacity-15 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at top right, #ffffff 0%, transparent 60%)' }} />
         <div className="z-10 text-center md:text-left">
           <h2 className="text-lg font-bold mb-1">Need to register a guest?</h2>
-          <p className="text-xs text-primary-fixed-dim opacity-90 max-w-sm">
+          <p className="text-xs text-primary-foreground/80 dark:text-primary-foreground/90 max-w-sm">
             Generate a secure QR access pass for parking slots or building security gates instantly.
           </p>
         </div>
         <Button 
           onClick={() => setIsNewPassOpen(true)}
-          className="z-10 bg-white hover:bg-slate-50 text-primary font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm w-full md:w-auto"
+          className="z-10 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-primary dark:text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm w-full md:w-auto"
         >
           <Plus className="size-4 shrink-0" />
           Create New Pass

@@ -173,7 +173,6 @@ export default function ServicesPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {activeRequests.map((req) => {
-                const isPlumbing = req.category.toLowerCase() === 'plumbing';
                 const progressWidth = req.status === 'Open' ? '15%' : '50%';
                 
                 return (
@@ -197,7 +196,7 @@ export default function ServicesPage() {
                         <Badge className={`${
                           req.status === 'Open' 
                             ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300' 
-                            : 'bg-primary/10 text-primary dark:text-primary-fixed-dim'
+                            : 'bg-primary/10 text-primary dark:text-primary'
                         } border-transparent text-[10px] font-bold py-0.5 px-2.5 rounded-full`}>
                           {req.status}
                         </Badge>
@@ -235,9 +234,9 @@ export default function ServicesPage() {
                         <Info className="size-4 text-primary shrink-0 mt-0.5" />
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
                           <span className="font-semibold text-slate-800 dark:text-slate-200">Latest Update:</span>{' '}
-                          {isPlumbing 
-                            ? "Technician Mario is scheduled to arrive tomorrow between 10:00 AM - 12:00 PM."
-                            : "Awaiting IT vendor assignment. We expect connection restoration within 24 hours."
+                          {req.status === 'Open'
+                            ? "Ticket received. Staff will assign a technician shortly."
+                            : "Technician is scheduled to resolve the issue soon."
                           }
                         </p>
                       </div>
@@ -328,7 +327,7 @@ export default function ServicesPage() {
                           </Button>
                         )}
                         <span className="text-[10px] text-slate-400 font-semibold">
-                          Technician Sarah
+                          Ticket Closed
                         </span>
                       </div>
                     </CardContent>

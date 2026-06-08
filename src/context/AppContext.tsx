@@ -1,9 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
 
 // Types
 export interface TenantInfo {
+  id: string; // Tenant ID (bigint as string) or User ID (uuid)
   name: string;
   room: string;
   pgName: string;
@@ -12,6 +14,20 @@ export interface TenantInfo {
   gateId: string;
   email: string;
   phone: string;
+  leaseEndDate?: string;
+  emergencyContact?: string;
+  cardLastFour?: string;
+  deposit?: string;
+}
+
+export interface Menu {
+  day: string;
+  breakfast: string;
+  lunch: string;
+  dinner: string;
+  breakfastTime: string;
+  lunchTime: string;
+  dinnerTime: string;
 }
 
 export interface Bill {
@@ -77,6 +93,60 @@ export interface AppNotification {
   read: boolean;
 }
 
+export interface OwnerTenant {
+  id: string | number;
+  status: string;
+  join_date?: string;
+  deposit?: string | number;
+  users: {
+    name: string;
+    phone?: string;
+    meal_dietary?: 'Veg' | 'Non-Veg' | 'Egg';
+    meal_breakfast?: boolean;
+    meal_lunch?: boolean;
+    meal_dinner?: boolean;
+  } | null;
+  rooms: {
+    room_number: string;
+  } | null;
+  beds?: {
+    bed_number: string;
+  } | null;
+}
+
+export interface OwnerPayment {
+  id: string | number;
+  amount: string;
+  month: string;
+  status: string;
+  payment_method: string | null;
+  payment_date?: string | null;
+  tenants: {
+    users: {
+      name: string;
+    } | null;
+    rooms: {
+      room_number: string;
+    } | null;
+  } | null;
+}
+
+export interface OwnerComplaint {
+  id: string | number;
+  title: string;
+  description: string | null;
+  status: string;
+  created_at: string;
+  tenants: {
+    users: {
+      name: string;
+    } | null;
+    rooms: {
+      room_number: string;
+    } | null;
+  } | null;
+}
+
 interface AppContextType {
   tenant: TenantInfo;
   bills: Bill[];
@@ -85,6 +155,7 @@ interface AppContextType {
   chats: ChatThread[];
   notices: Notice[];
   notifications: AppNotification[];
+  menuList: Menu[];
   payBill: (id: string) => void;
   addRequest: (category: string, title: string, description: string, priority: 'Low' | 'Medium' | 'High') => void;
   addGuestPass: (name: string, relation: string, phone: string, date: string, entryTime: string, exitTime: string) => void;
@@ -99,132 +170,56 @@ interface AppContextType {
   updateMeals: (breakfast: boolean, lunch: boolean, dinner: boolean) => void;
   updateDietary: (dietary: 'Veg' | 'Non-Veg' | 'Egg') => void;
   isLoggedIn: boolean;
-  login: (emailOrPhone: string) => void;
+  userRole: 'Owner' | 'Tenant' | null;
+  login: (emailOrPhone: string, password?: string) => Promise<{ error: string | null }>;
   logout: () => void;
-  register: (name: string, email: string, phone: string) => void;
+  register: (name: string, email: string, phone: string, password?: string, role?: string) => Promise<{ error: string | null }>;
+  
+  // Owner States & Actions
+  allTenants: OwnerTenant[];
+  allComplaints: OwnerComplaint[];
+  allPayments: OwnerPayment[];
+  allMeals: {
+    breakfastCount: number;
+    lunchCount: number;
+    dinnerCount: number;
+    dietaryCounts: { Veg: number; 'Non-Veg': number; Egg: number };
+  };
+  updateComplaintStatus: (id: string, status: 'pending' | 'in-progress' | 'resolved') => void;
+  addNotice: (title: string, message: string) => void;
+  markPaymentAsPaid: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  console.log("AppProvider render called, window:", typeof window !== 'undefined');
   // Authentication State
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [userRole, setUserRole] = useState<'Owner' | 'Tenant' | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
 
   // 1. Tenant Info
   const [tenant, setTenant] = useState<TenantInfo>({
-    name: "Alex Mercer",
-    room: "Room 302",
-    pgName: "NestHaven PG",
-    bed: "Bed A",
-    joiningDate: "Dec 15, 2025",
-    gateId: "NH-302A-ALEX",
-    email: "alex.mercer@gmail.com",
-    phone: "+1 (312) 847-1928"
+    id: "",
+    name: "Loading...",
+    room: "...",
+    pgName: "Loading PG...",
+    bed: "...",
+    joiningDate: "...",
+    gateId: "...",
+    email: "",
+    phone: ""
   });
 
-  // check if user was logged in previously on client side
-  useEffect(() => {
-    const checkAuth = () => {
-      const stored = localStorage.getItem('pg_connect_logged_in');
-      if (stored === 'true') {
-        setIsLoggedIn(true);
-      }
-      const storedTenant = localStorage.getItem('pg_connect_tenant');
-      if (storedTenant) {
-        try {
-          setTenant(JSON.parse(storedTenant));
-        } catch {}
-      }
-    };
-    setTimeout(checkAuth, 0);
-  }, []);
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const login = (emailOrPhone: string) => {
-    setIsLoggedIn(true);
-    localStorage.setItem('pg_connect_logged_in', 'true');
-  };
-
-  const logout = () => {
-    setIsLoggedIn(false);
-    localStorage.removeItem('pg_connect_logged_in');
-  };
-
-  const register = (name: string, email: string, phone: string) => {
-    const updatedTenant = {
-      name,
-      room: "Room 302",
-      pgName: "NestHaven PG",
-      bed: "Bed A",
-      joiningDate: new Date().toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }),
-      gateId: `NH-302A-${name.split(' ')[0].toUpperCase()}`,
-      email,
-      phone
-    };
-    setTenant(updatedTenant);
-    localStorage.setItem('pg_connect_tenant', JSON.stringify(updatedTenant));
-    setIsLoggedIn(true);
-    localStorage.setItem('pg_connect_logged_in', 'true');
-  };
-
-  // 2. Bills State
-  const [bills, setBills] = useState<Bill[]>([
-    { id: "bill-1", title: "Electricity Bill - Nov", amount: 45.50, dueDate: "In 3 days", status: "Unpaid", category: "Utility" },
-    { id: "bill-2", title: "Monthly Rent - Nov", amount: 1250.00, dueDate: "Paid", status: "Paid", category: "Rent" },
-    { id: "bill-3", title: "Water Bill - Oct", amount: 15.00, dueDate: "Paid", status: "Paid", category: "Utility" },
-    { id: "bill-4", title: "Monthly Rent - Oct", amount: 1250.00, dueDate: "Paid", status: "Paid", category: "Rent" }
-  ]);
-
-  // 3. Service Requests State
-  const [requests, setRequests] = useState<ServiceRequest[]>([
-    { id: "req-1", category: "Plumbing", title: "Leaking Faucet in Bathroom", description: "The hot water tap in the bathroom sink is dripping constantly, wasting water and making noise.", priority: "Medium", status: "In Progress", raisedDate: "Yesterday" },
-    { id: "req-2", category: "Wi-Fi", title: "Wi-Fi connection dropouts", description: "The connection drops every 10 minutes from Room 302.", priority: "High", status: "Resolved", raisedDate: "2 weeks ago" }
-  ]);
-
-  // 4. Guest Passes State
-  const [guestPasses, setGuestPasses] = useState<GuestPass[]>([
-    { id: "pass-1", visitorName: "Siddharth Mercer", relationship: "Brother", phone: "+1 (312) 555-8912", date: "2026-06-08", entryTime: "14:00", exitTime: "20:00", qrCodeToken: "PASS-SID-991823" }
-  ]);
-
-  // 5. Chats State
-  const [chats, setChats] = useState<ChatThread[]>([
-    {
-      id: "thread-1",
-      title: "Room 302 Chat",
-      subtitle: "Kabir, Alex",
-      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80",
-      messages: [
-        { id: "m1", senderName: "Kabir", senderAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80", text: "Hey, are we ordering groceries today?", timestamp: "10:30 AM", isSelf: false },
-        { id: "m2", senderName: "Alex", senderAvatar: "", text: "Yes, I'm adding milk and apples to the list.", timestamp: "10:32 AM", isSelf: true },
-        { id: "m3", senderName: "Kabir", senderAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80", text: "Awesome, I'll add bread.", timestamp: "10:33 AM", isSelf: false }
-      ]
-    },
-    {
-      id: "thread-2",
-      title: "Wing B Community",
-      subtitle: "General discussion",
-      avatar: "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?auto=format&fit=crop&w=100&q=80",
-      messages: [
-        { id: "gm1", senderName: "Rohan", senderAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80", text: "Has anyone seen my red water bottle in the common room?", timestamp: "Yesterday", isSelf: false },
-        { id: "gm2", senderName: "Elena", senderAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80", text: "I think I saw it on the middle shelf in the fridge.", timestamp: "Yesterday", isSelf: false }
-      ]
-    }
-  ]);
-
-  // 6. Notices State
-  const [notices] = useState<Notice[]>([
-    { id: "notice-1", title: "Wi-Fi Upgrade Session", content: "High-speed fiber route migration scheduled for Wednesday 2:00 AM - 4:00 AM. Expect brief downtime.", date: "Today", category: "Maintenance" },
-    { id: "notice-2", title: "Lobby Painting Scheduled", content: "The entrance lobby is being repainted this week. Please use the secondary gate for entering and exiting.", date: "Yesterday", category: "Notice" },
-    { id: "notice-3", title: "Weekend Rooftop BBQ Meet", content: "Join us on Saturday at 7:00 PM for roommate networking, food, and music on the terrace roof.", date: "3 days ago", category: "Event" }
-  ]);
-
-  // 7. Notifications State
-  const [notifications, setNotifications] = useState<AppNotification[]>([
-    { id: "notif-1", title: "Rent Receipt Ready", description: "Rent receipt for November is ready to download.", timestamp: "2 hours ago", read: false },
-    { id: "notif-2", title: "Electricity Bill Generated", description: "Electricity bill of $45.50 generated for Room 302.", timestamp: "Yesterday", read: false }
-  ]);
-
-  // 8. Meals State
+  // Data States
+  const [bills, setBills] = useState<Bill[]>([]);
+  const [requests, setRequests] = useState<ServiceRequest[]>([]);
+  const [guestPasses, setGuestPasses] = useState<GuestPass[]>([]);
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [menuList, setMenuList] = useState<Menu[]>([]);
   const [meals, setMeals] = useState<{
     breakfast: boolean;
     lunch: boolean;
@@ -237,38 +232,420 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     dietary: 'Veg'
   });
 
-  // Action: Pay Bill
-  const payBill = (id: string) => {
-    setBills(prev => prev.map(bill => 
-      bill.id === id ? { ...bill, status: 'Paid', dueDate: 'Paid' } : bill
-    ));
-    setNotifications(prev => [
-      {
-        id: `notif-${Date.now()}`,
-        title: "Payment Success",
-        description: "Your payment was processed successfully.",
-        timestamp: "Just now",
-        read: false
-      },
-      ...prev
-    ]);
-  };
+  // Owner Specific States
+  const [allTenants, setAllTenants] = useState<OwnerTenant[]>([]);
+  const [allComplaints, setAllComplaints] = useState<OwnerComplaint[]>([]);
+  const [allPayments, setAllPayments] = useState<OwnerPayment[]>([]);
+  const [allMeals, setAllMeals] = useState<{
+    breakfastCount: number;
+    lunchCount: number;
+    dinnerCount: number;
+    dietaryCounts: { Veg: number; 'Non-Veg': number; Egg: number };
+  }>({
+    breakfastCount: 0,
+    lunchCount: 0,
+    dinnerCount: 0,
+    dietaryCounts: { Veg: 0, 'Non-Veg': 0, Egg: 0 }
+  });
 
-  // Action: Add Service Request
-  const addRequest = (category: string, title: string, description: string, priority: 'Low' | 'Medium' | 'High') => {
-    const newReq: ServiceRequest = {
-      id: `req-${Date.now()}`,
-      category,
-      title,
-      description,
-      priority,
-      status: 'Open',
-      raisedDate: "Just now"
+  // Chat Local Mock State
+  const [chats, setChats] = useState<ChatThread[]>([]);
+
+  // Main Data Syncing Function
+  const fetchData = useCallback(async (uid: string, email: string) => {
+    try {
+      // 1. Fetch user profile
+      const { data: userProfile, error: profileErr } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', uid)
+        .single();
+
+      if (profileErr || !userProfile) {
+        console.error('Error fetching user profile:', profileErr);
+        return;
+      }
+
+      const role = userProfile.role as 'Owner' | 'Tenant';
+      setUserRole(role);
+
+
+      // Set Meals state
+      setMeals({
+        breakfast: userProfile.meal_breakfast ?? true,
+        lunch: userProfile.meal_lunch ?? false,
+        dinner: userProfile.meal_dinner ?? true,
+        dietary: (userProfile.meal_dietary as 'Veg' | 'Non-Veg' | 'Egg') ?? 'Veg'
+      });
+
+      // 2. Fetch notices (common to both)
+      const { data: dbNotices } = await supabase
+        .from('notices')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (dbNotices) {
+        setNotices(dbNotices.map((n: { id: number; title: string; message: string; created_at: string }) => ({
+          id: n.id.toString(),
+          title: n.title,
+          content: n.message,
+          date: new Date(n.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+          category: n.title.toLowerCase().includes('wifi') || n.title.toLowerCase().includes('maintenance') ? 'Maintenance' : 'Notice'
+        })));
+      }
+
+      // 3. Fetch menus (common to both)
+      const { data: dbMenus } = await supabase
+        .from('menus')
+        .select('*')
+        .order('id', { ascending: true });
+
+      if (dbMenus) {
+        setMenuList(dbMenus.map((m: { day: string; breakfast: string; lunch: string; dinner: string; breakfast_time: string; lunch_time: string; dinner_time: string }) => ({
+          day: m.day,
+          breakfast: m.breakfast,
+          lunch: m.lunch,
+          dinner: m.dinner,
+          breakfastTime: m.breakfast_time,
+          lunchTime: m.lunch_time,
+          dinnerTime: m.dinner_time
+        })));
+      }
+
+      if (role === 'Tenant') {
+        // Fetch Tenant specific data
+        const { data: tenantDetails } = await supabase
+          .from('tenants')
+          .select('*, pgs(*), rooms(*), beds(*)')
+          .eq('user_id', uid)
+          .single();
+
+        if (tenantDetails) {
+          const tInfo: TenantInfo = {
+            id: tenantDetails.id.toString(),
+            name: userProfile.name,
+            room: tenantDetails.rooms ? `Room ${tenantDetails.rooms.room_number}` : 'Not Assigned',
+            pgName: tenantDetails.pgs ? tenantDetails.pgs.name : 'Not Assigned',
+            bed: tenantDetails.beds ? tenantDetails.beds.bed_number : 'Not Assigned',
+            joiningDate: tenantDetails.join_date 
+              ? new Date(tenantDetails.join_date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) 
+              : 'Not Set',
+            gateId: tenantDetails.rooms 
+              ? `NH-${tenantDetails.rooms.room_number}-${userProfile.name.split(' ')[0].toUpperCase()}` 
+              : 'Not Configured',
+            email: email,
+            phone: userProfile.phone || 'Not Configured',
+            leaseEndDate: tenantDetails.lease_end_date 
+              ? new Date(tenantDetails.lease_end_date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) 
+              : 'Not Configured',
+            emergencyContact: tenantDetails.emergency_contact || 'Not Configured',
+            cardLastFour: tenantDetails.card_last_four || '',
+            deposit: tenantDetails.deposit 
+              ? `$${parseFloat(tenantDetails.deposit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+              : 'Not Configured'
+          };
+          setTenant(tInfo);
+
+          // Seed dynamic chats
+          setChats([
+            {
+              id: "thread-1",
+              title: "Roommates Chat",
+              subtitle: `Active members in ${tenantDetails.rooms ? `Room ${tenantDetails.rooms.room_number}` : 'Room 302'}`,
+              avatar: "",
+              messages: [
+                {
+                  id: "msg-1",
+                  senderName: "Kabir",
+                  senderAvatar: "",
+                  text: "Hey, who's cleaning the common area today?",
+                  timestamp: "10:15 AM",
+                  isSelf: false
+                },
+                {
+                  id: "msg-2",
+                  senderName: userProfile.name,
+                  senderAvatar: "",
+                  text: "I'll do it in the evening after work.",
+                  timestamp: "10:20 AM",
+                  isSelf: true
+                }
+              ]
+            },
+            {
+              id: "thread-2",
+              title: `${tenantDetails.pgs ? tenantDetails.pgs.name : 'NestHaven PG'} Helpdesk`,
+              subtitle: "Property management and support staff",
+              avatar: "",
+              messages: [
+                {
+                  id: "msg-3",
+                  senderName: "Manager (Rajesh)",
+                  senderAvatar: "",
+                  text: "Hi residents, wifi router in Wing B has been restarted. Please check if connectivity is restored.",
+                  timestamp: "Yesterday",
+                  isSelf: false
+                }
+              ]
+            }
+          ]);
+
+          // Fetch Bills
+          const { data: dbPayments } = await supabase
+            .from('payments')
+            .select('*')
+            .eq('tenant_id', tenantDetails.id)
+            .order('id', { ascending: false });
+
+          if (dbPayments) {
+            setBills(dbPayments.map((p: { id: number; month: string; amount: string | number; status: string; due_date: string }) => {
+              const amt = typeof p.amount === 'number' ? p.amount : parseFloat(p.amount);
+              const formattedDueDate = p.due_date 
+                ? new Date(p.due_date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) 
+                : 'Not Set';
+              return {
+                id: p.id.toString(),
+                title: `${p.month} ${amt > 1000 ? 'Rent' : 'Electricity Bill'}`,
+                amount: amt,
+                dueDate: p.status === 'paid' ? 'Paid' : `Due by ${formattedDueDate}`,
+                status: p.status === 'paid' ? 'Paid' : p.status === 'overdue' ? 'Overdue' : 'Unpaid',
+                category: amt > 1000 ? 'Rent' : 'Utility'
+              };
+            }));
+          }
+
+          // Fetch Complaints
+          const { data: dbComplaints } = await supabase
+            .from('complaints')
+            .select('*')
+            .eq('tenant_id', tenantDetails.id)
+            .order('id', { ascending: false });
+
+          if (dbComplaints) {
+            setRequests(dbComplaints.map((c: { id: number; title: string; description: string | null; status: string; created_at: string }) => ({
+              id: c.id.toString(),
+              category: c.title.toLowerCase().includes('water') || c.title.toLowerCase().includes('leak') || c.title.toLowerCase().includes('faucet') ? 'Plumbing' : 'Maintenance',
+              title: c.title,
+              description: c.description || '',
+              priority: 'Medium',
+              status: c.status === 'resolved' ? 'Resolved' : c.status === 'in-progress' ? 'In Progress' : 'Open',
+              raisedDate: new Date(c.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })
+            })));
+          }
+        }
+      } else if (role === 'Owner') {
+        // Fetch Owner specific data
+        
+        // 1. Fetch Tenants list
+        const { data: dbTenants } = await supabase
+          .from('tenants')
+          .select('*, users(*), rooms(*), beds(*)');
+        if (dbTenants) setAllTenants(dbTenants);
+
+        // 2. Fetch Payments list
+        const { data: dbPayments } = await supabase
+          .from('payments')
+          .select('*, tenants(*, users(*), rooms(*))')
+          .order('id', { ascending: false });
+        if (dbPayments) setAllPayments(dbPayments);
+
+        // 3. Fetch Complaints list
+        const { data: dbComplaints } = await supabase
+          .from('complaints')
+          .select('*, tenants(*, users(*), rooms(*))')
+          .order('id', { ascending: false });
+        if (dbComplaints) setAllComplaints(dbComplaints);
+
+        // 4. Aggregate Meals
+        const { data: dbUsersMeals } = await supabase
+          .from('users')
+          .select('meal_breakfast, meal_lunch, meal_dinner, meal_dietary')
+          .eq('role', 'Tenant');
+
+        if (dbUsersMeals) {
+          let bCount = 0, lCount = 0, dCount = 0;
+          const diet = { Veg: 0, 'Non-Veg': 0, Egg: 0 };
+          dbUsersMeals.forEach(u => {
+            if (u.meal_breakfast) bCount++;
+            if (u.meal_lunch) lCount++;
+            if (u.meal_dinner) dCount++;
+            if (u.meal_dietary === 'Veg') diet.Veg++;
+            else if (u.meal_dietary === 'Non-Veg') diet['Non-Veg']++;
+            else if (u.meal_dietary === 'Egg') diet.Egg++;
+          });
+          setAllMeals({
+            breakfastCount: bCount,
+            lunchCount: lCount,
+            dinnerCount: dCount,
+            dietaryCounts: diet
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Error synchronizing data:', err);
+    }
+  }, []);
+
+  // Monitor Supabase Auth state changes
+  useEffect(() => {
+    let sub: ReturnType<typeof supabase.channel> | null = null;
+
+    const setupAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setIsLoggedIn(true);
+        setUserId(session.user.id);
+        fetchData(session.user.id, session.user.email || '');
+
+        // Setup real-time subscription for instant syncing
+        sub = supabase
+          .channel('schema-db-changes')
+          .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+            fetchData(session.user.id, session.user.email || '');
+          })
+          .subscribe();
+      } else {
+        setIsLoggedIn(false);
+        setUserId(null);
+        setUserRole(null);
+      }
+
+      // Listen to auth changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (session?.user) {
+          setIsLoggedIn(true);
+          setUserId(session.user.id);
+          fetchData(session.user.id, session.user.email || '');
+        } else {
+          setIsLoggedIn(false);
+          setUserId(null);
+          setUserRole(null);
+          if (sub) {
+            supabase.removeChannel(sub);
+          }
+        }
+      });
+
+      return () => {
+        subscription.unsubscribe();
+        if (sub) {
+          supabase.removeChannel(sub);
+        }
+      };
     };
-    setRequests(prev => [newReq, ...prev]);
+
+    setupAuth();
+  }, [fetchData]);
+
+  // Sign-in
+  const login = async (emailOrPhone: string, password?: string) => {
+    console.log("AppContext login function called for:", emailOrPhone);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: emailOrPhone,
+        password: password || 'password123',
+      });
+      console.log("Supabase signInWithPassword result error:", error);
+      return { error: error ? error.message : null };
+    } catch (err) {
+      console.log("Supabase signInWithPassword threw exception:", err);
+      const errorMsg = err instanceof Error ? err.message : 'An error occurred during login.';
+      return { error: errorMsg };
+    }
   };
 
-  // Action: Add Guest Pass
+  // Sign-out
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setIsLoggedIn(false);
+    setUserId(null);
+    setUserRole(null);
+  };
+
+  // Register
+  const register = async (name: string, email: string, phone: string, password?: string, role?: string) => {
+    try {
+      const selectedRole = role || 'Tenant';
+      const { error } = await supabase.auth.signUp({
+        email,
+        password: password || 'password123',
+        options: {
+          data: {
+            name,
+            phone,
+            role: selectedRole // triggers copy into public.users with the chosen role
+          }
+        }
+      });
+      return { error: error ? error.message : null };
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'An error occurred during registration.';
+      return { error: errorMsg };
+    }
+  };
+
+  // Pay Bill (Tenant side)
+  const payBill = async (id: string) => {
+    if (!id) return;
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .update({
+          status: 'paid',
+          payment_date: new Date().toISOString().split('T')[0],
+          payment_method: 'Card'
+        })
+        .eq('id', parseInt(id));
+
+      if (error) throw error;
+      
+      // Update local notifications immediately for feedback
+      setNotifications(prev => [
+        {
+          id: `notif-${Date.now()}`,
+          title: "Payment Success",
+          description: "Your payment was processed successfully.",
+          timestamp: "Just now",
+          read: false
+        },
+        ...prev
+      ]);
+    } catch (err) {
+      console.error('Error paying bill:', err);
+    }
+  };
+
+  // Add Service Request (Tenant side)
+  const addRequest = async (category: string, title: string, description: string, _priority: 'Low' | 'Medium' | 'High') => {
+    if (!userId) return;
+    try {
+      console.log(`Adding service request category: ${category}, priority: ${_priority}`);
+      // Find tenant ID
+      const { data: tenantDetails } = await supabase
+        .from('tenants')
+        .select('id, pg_id')
+        .eq('user_id', userId)
+        .single();
+
+      if (tenantDetails) {
+        const { error } = await supabase
+          .from('complaints')
+          .insert({
+            tenant_id: tenantDetails.id,
+            pg_id: tenantDetails.pg_id,
+            title: title,
+            description: description,
+            status: 'pending'
+          });
+
+        if (error) throw error;
+      }
+    } catch (err) {
+      console.error('Error raising service request:', err);
+    }
+  };
+
+  // Add Guest Pass (Local state only, or can persist in session storage)
   const addGuestPass = (name: string, relation: string, phone: string, date: string, entryTime: string, exitTime: string) => {
     const newPass: GuestPass = {
       id: `pass-${Date.now()}`,
@@ -283,29 +660,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setGuestPasses(prev => [newPass, ...prev]);
   };
 
-  // Action: Send Message
+  // Send Chat message (Local state only)
   const sendChatMessage = (threadId: string, text: string) => {
+    const newMsg: Message = {
+      id: `msg-${Date.now()}`,
+      senderName: tenant.name || 'User',
+      senderAvatar: "",
+      text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isSelf: true
+    };
+
     setChats(prev => prev.map(thread => {
       if (thread.id === threadId) {
         return {
           ...thread,
-          messages: [
-            ...thread.messages,
-            {
-              id: `msg-${Date.now()}`,
-              senderName: "Alex",
-              senderAvatar: "",
-              text,
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              isSelf: true
-            }
-          ]
+          messages: [...thread.messages, newMsg]
         };
       }
       return thread;
     }));
 
-    // Simulate roommate auto-response after 2 seconds
     if (threadId === "thread-1") {
       setTimeout(() => {
         setChats(prev => prev.map(thread => {
@@ -317,7 +692,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 {
                   id: `msg-reply-${Date.now()}`,
                   senderName: "Kabir",
-                  senderAvatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80",
+                  senderAvatar: "",
                   text: "Got it! Adding it now.",
                   timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                   isSelf: false
@@ -331,19 +706,96 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Action: Mark Notifications Read
+  // Mark Notifications Read
   const markNotificationsAsRead = () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
-  // Action: Toggle Meals
-  const updateMeals = (breakfast: boolean, lunch: boolean, dinner: boolean) => {
-    setMeals(prev => ({ ...prev, breakfast, lunch, dinner }));
+  // Update meals selections (Tenant)
+  const updateMeals = async (breakfast: boolean, lunch: boolean, dinner: boolean) => {
+    if (!userId) return;
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          meal_breakfast: breakfast,
+          meal_lunch: lunch,
+          meal_dinner: dinner
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+      setMeals(prev => ({ ...prev, breakfast, lunch, dinner }));
+    } catch (err) {
+      console.error('Error updating meals preferences:', err);
+    }
   };
 
-  // Action: Update Dietary preference
-  const updateDietary = (dietary: 'Veg' | 'Non-Veg' | 'Egg') => {
-    setMeals(prev => ({ ...prev, dietary }));
+  // Update dietary preference (Tenant)
+  const updateDietary = async (dietary: 'Veg' | 'Non-Veg' | 'Egg') => {
+    if (!userId) return;
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          meal_dietary: dietary
+        })
+        .eq('id', userId);
+
+      if (error) throw error;
+      setMeals(prev => ({ ...prev, dietary }));
+    } catch (err) {
+      console.error('Error updating dietary preferences:', err);
+    }
+  };
+
+  // Owner Action: Update Complaint status
+  const updateComplaintStatus = async (id: string, status: 'pending' | 'in-progress' | 'resolved') => {
+    try {
+      const { error } = await supabase
+        .from('complaints')
+        .update({ status })
+        .eq('id', parseInt(id));
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error updating complaint status:', err);
+    }
+  };
+
+  // Owner Action: Add Notice
+  const addNotice = async (title: string, message: string) => {
+    try {
+      const { error } = await supabase
+        .from('notices')
+        .insert({
+          pg_id: 1, // Seeded NestHaven PG
+          title,
+          message
+        });
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error adding notice:', err);
+    }
+  };
+
+  // Owner Action: Mark payment as paid
+  const markPaymentAsPaid = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .update({
+          status: 'paid',
+          payment_date: new Date().toISOString().split('T')[0],
+          payment_method: 'Cash/Offline'
+        })
+        .eq('id', parseInt(id));
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error marking payment as paid:', err);
+    }
   };
 
   return (
@@ -355,6 +807,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       chats,
       notices,
       notifications,
+      menuList,
       payBill,
       addRequest,
       addGuestPass,
@@ -364,9 +817,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateMeals,
       updateDietary,
       isLoggedIn,
+      userRole,
       login,
       logout,
-      register
+      register,
+      
+      // Owner states and actions
+      allTenants,
+      allComplaints,
+      allPayments,
+      allMeals,
+      updateComplaintStatus,
+      addNotice,
+      markPaymentAsPaid
     }}>
       {children}
     </AppContext.Provider>

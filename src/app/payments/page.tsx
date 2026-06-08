@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 
 export default function PaymentsPage() {
-  const { bills, payBill } = useApp();
+  const { bills, payBill, tenant } = useApp();
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [selectedBill, setSelectedBill] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -87,10 +87,10 @@ export default function PaymentsPage() {
               </span>
             </div>
             
-            {totalBalance > 0 ? (
+            {totalBalance > 0 && activePayBill ? (
               <p className="text-xs text-destructive font-semibold mt-2 flex items-center gap-1">
                 <AlertCircle className="size-3.5" />
-                Due soon: Electricity Bill
+                Due soon: {activePayBill.title}
               </p>
             ) : (
               <p className="text-xs text-emerald-600 font-semibold mt-2 flex items-center gap-1">
@@ -103,9 +103,9 @@ export default function PaymentsPage() {
           <div className="z-10 border-t border-slate-100 dark:border-slate-800 pt-4 flex items-center justify-between">
             <div className="flex flex-col gap-0.5">
               <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Auto-Pay Method</span>
-              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Visa ending in 4242</span>
+              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Visa ending in {tenant.cardLastFour || '4242'}</span>
             </div>
-            <Badge variant="outline" className="text-[10px] font-bold text-primary border-primary/20 dark:text-primary-foreground">
+            <Badge variant="outline" className="text-[10px] font-bold text-primary border-primary/20 dark:text-primary">
               Active
             </Badge>
           </div>
@@ -143,7 +143,7 @@ export default function PaymentsPage() {
                     {bill.title}
                   </h3>
                   <p className="text-[11px] text-slate-500 mt-0.5">
-                    {bill.status === 'Paid' ? 'Paid via Auto-pay' : 'Due in 3 days'}
+                    {bill.status === 'Paid' ? 'Paid via Auto-pay' : bill.dueDate}
                   </p>
                 </div>
               </div>
@@ -205,7 +205,7 @@ export default function PaymentsPage() {
                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                   {bills.find(b => b.id === selectedBill)?.title}
                 </p>
-                <p className="text-xs text-slate-500 mt-0.5">Card ending in *4242</p>
+                <p className="text-xs text-slate-500 mt-0.5">Card ending in *{tenant.cardLastFour || '4242'}</p>
               </div>
               <span className="text-lg font-bold text-slate-900 dark:text-white">
                 ${bills.find(b => b.id === selectedBill)?.amount.toFixed(2)}

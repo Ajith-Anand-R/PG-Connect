@@ -56,34 +56,34 @@
 }
 
 :root {
-  --background: #f9f9ff;
-  --foreground: #101c2d;
+  --background: #f8fafc;
+  --foreground: #0f172a;
   --card: #ffffff;
-  --card-foreground: #101c2d;
+  --card-foreground: #0f172a;
   --popover: #ffffff;
-  --popover-foreground: #101c2d;
-  --primary: #003d9b;
+  --popover-foreground: #0f172a;
+  --primary: #2563eb;
   --primary-foreground: #ffffff;
-  --secondary: #00687a;
+  --secondary: #0ea5e9;
   --secondary-foreground: #ffffff;
-  --muted: #f0f3ff;
-  --muted-foreground: #434654;
-  --accent: #e7eeff;
-  --accent-foreground: #003d9b;
-  --destructive: #ba1a1a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+  --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #c3c6d6;
-  --input: #c3c6d6;
-  --ring: #003d9b;
-  --radius: 0.5rem;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #3b82f6;
+  --radius: 0.75rem;
   
   /* Additional Tenancy OS Brand Colors */
-  --brand-blue: #0052cc;
-  --brand-teal: #00a3bf;
-  --surface-low: #f0f3ff;
-  --surface-container: #e7eeff;
-  --surface-high: #dee9ff;
-  --surface-highest: #d7e3fb;
+  --brand-blue: #2563eb;
+  --brand-teal: #0d9488;
+  --surface-low: #f8fafc;
+  --surface-container: #f1f5f9;
+  --surface-high: #e2e8f0;
+  --surface-highest: #cbd5e1;
 }
 
 .dark {

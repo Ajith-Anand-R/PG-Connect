@@ -20,21 +20,28 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 export default function DashboardPage() {
-  const { tenant, bills, requests, payBill } = useApp();
+  const { tenant, bills, requests, payBill, menuList } = useApp();
   const [isPaying, setIsPaying] = useState(false);
 
-  // Find electricity bill (id: bill-1)
-  const electricityBill = bills.find(b => b.id === 'bill-1');
-  // Find paid rent (id: bill-2)
-  const rentBill = bills.find(b => b.id === 'bill-2');
+  // Find electricity bill (category: Utility)
+  const electricityBill = bills.find(b => b.category === 'Utility');
+  // Find paid rent (category: Rent)
+  const rentBill = bills.find(b => b.category === 'Rent');
   // Open tickets
   const activeRequests = requests.filter(r => r.status !== 'Resolved');
 
+  // Calculate tomorrow's menu
+  const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const tomorrowIndex = (new Date().getDay() + 1) % 7;
+  const tomorrowDayName = daysOfWeek[tomorrowIndex];
+  const tomorrowMenu = menuList.find(m => m.day === tomorrowDayName) || menuList.find(m => m.day === 'Wed');
+
   const handlePay = () => {
+    if (!electricityBill) return;
     setIsPaying(true);
     // Simulate slight lag for visual feedback (Tactile feedback rule)
     setTimeout(() => {
-      payBill('bill-1');
+      payBill(electricityBill.id);
       setIsPaying(false);
     }, 1200);
   };
@@ -69,8 +76,8 @@ export default function DashboardPage() {
             {/* Rent Paid Card */}
             <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 flex flex-col justify-between min-h-[110px]">
               <div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">November Rent</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">${rentBill?.amount.toLocaleString()}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{rentBill ? rentBill.title : 'Rent'}</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">${rentBill?.amount ? rentBill.amount.toLocaleString() : '0'}</p>
               </div>
               <div className="mt-3 inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold px-2.5 py-1 rounded-full w-max">
                 <CheckCircle2 className="size-3.5" />
@@ -86,14 +93,14 @@ export default function DashboardPage() {
             }`}>
               <div>
                 <div className="flex justify-between items-start">
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Electricity Bill</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{electricityBill ? electricityBill.title : 'Electricity Bill'}</p>
                   {electricityBill?.status !== 'Paid' && <Bolt className="size-4 text-destructive animate-pulse" />}
                 </div>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">${electricityBill?.amount}</p>
+                <p className="text-2xl font-bold text-slate-900 dark:text-white">${electricityBill?.amount ?? '0'}</p>
                 <p className={`text-[10px] mt-1 ${
                   electricityBill?.status === 'Paid' ? 'text-slate-500' : 'text-destructive font-semibold'
                 }`}>
-                  {electricityBill?.status === 'Paid' ? 'No outstanding dues' : 'Due in 3 days'}
+                  {electricityBill?.status === 'Paid' ? 'No outstanding dues' : (electricityBill?.dueDate || 'Due soon')}
                 </p>
               </div>
 
@@ -136,10 +143,10 @@ export default function DashboardPage() {
             </div>
             <div>
               <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                Masala Dosa, Sambar, Chutney & Filter Coffee
+                {tomorrowMenu ? tomorrowMenu.breakfast : 'Masala Dosa, Sambar, Chutney & Filter Coffee'}
               </p>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Served 7:30 AM - 9:30 AM • Vegetarian
+                Served {tomorrowMenu ? tomorrowMenu.breakfastTime : '7:30 AM - 9:30 AM'} • Vegetarian
               </p>
             </div>
           </div>

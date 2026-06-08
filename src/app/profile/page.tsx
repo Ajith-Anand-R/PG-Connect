@@ -28,12 +28,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export default function ProfilePage() {
-  const { tenant, logout } = useApp();
+  const { tenant, logout, bills } = useApp();
   
   // Local state to simulate profile edit
   const [phoneVal, setPhoneVal] = useState(tenant.phone);
   const [emailVal, setEmailVal] = useState(tenant.email);
-  const [emergencyContact, setEmergencyContact] = useState("Sarah Mercer (Mother) • +1 (312) 555-9018");
+  const [emergencyContact, setEmergencyContact] = useState(tenant.emergencyContact || "Not Configured");
+  
+  /* eslint-disable react-hooks/set-state-in-effect */
+  React.useEffect(() => {
+    setPhoneVal(tenant.phone);
+    setEmailVal(tenant.email);
+    setEmergencyContact(tenant.emergencyContact || "Not Configured");
+  }, [tenant]);
+  /* eslint-enable react-hooks/set-state-in-effect */
   
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isRulesOpen, setIsRulesOpen] = useState(false);
@@ -68,57 +76,53 @@ export default function ProfilePage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Digital Resident Card & Gate QR Code */}
         <div className="lg:col-span-5 flex flex-col gap-6">
-          <Card className="bg-primary text-white border-transparent overflow-hidden shadow-lg relative transition-all duration-300 hover:shadow-xl group">
+          <Card className="bg-primary text-primary-foreground border-transparent overflow-hidden shadow-lg relative transition-all duration-300 hover:shadow-xl group">
             {/* Pattern overlay */}
             <div className="absolute inset-0 opacity-15 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at top right, #ffffff 0%, transparent 60%)' }} />
             
             <CardContent className="p-6 flex flex-col gap-6 z-10">
               <div className="flex justify-between items-start">
                 <div className="flex flex-col gap-2">
-                  <span className="text-[10px] font-bold text-primary-fixed-dim uppercase tracking-widest opacity-80">
+                  <span className="text-[10px] font-bold text-primary-foreground/80 uppercase tracking-widest opacity-80">
                     Digital Resident Passport
                   </span>
-                  <h2 className="text-xl font-bold tracking-tight">{tenant.name}</h2>
+                  <h2 className="text-xl font-bold tracking-tight text-white dark:text-primary-foreground">{tenant.name}</h2>
                   
-                  <div className="inline-flex items-center gap-1 bg-white/10 px-2.5 py-0.5 rounded-full w-max border border-white/5">
-                    <CheckCircle2 className="size-3.5 text-emerald-400 fill-emerald-400/20" />
-                    <span className="text-[10px] font-bold text-white">Verified Resident</span>
+                  <div className="inline-flex items-center gap-1 bg-white/10 dark:bg-black/10 px-2.5 py-0.5 rounded-full w-max border border-white/5 dark:border-black/5">
+                    <CheckCircle2 className="size-3.5 text-emerald-400 dark:text-emerald-600 fill-emerald-400/20" />
+                    <span className="text-[10px] font-bold text-white dark:text-primary-foreground">Verified Resident</span>
                   </div>
                 </div>
 
-                <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-white/20 shadow-md shrink-0">
-                  <img 
-                    src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" 
-                    alt="Resident Avatar" 
-                    className="w-full h-full object-cover" 
-                  />
+                <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-white/20 shadow-md shrink-0 bg-white/20 text-white flex items-center justify-center font-bold text-xl uppercase select-none">
+                  {tenant.name.split(' ').map(n => n[0]).join('') || 'U'}
                 </div>
               </div>
 
               {/* Room Config Info Grid */}
-              <div className="grid grid-cols-2 gap-3 bg-white/10 p-4 rounded-xl border border-white/5 backdrop-blur-xs">
+              <div className="grid grid-cols-2 gap-3 bg-white/10 dark:bg-black/10 p-4 rounded-xl border border-white/5 dark:border-black/5 backdrop-blur-xs">
                 <div>
-                  <span className="text-[9px] opacity-75 uppercase tracking-wide font-semibold">Room Code</span>
-                  <p className="text-sm font-bold mt-0.5">{tenant.room}</p>
+                  <span className="text-[9px] opacity-75 uppercase tracking-wide font-semibold text-white/80 dark:text-primary-foreground/80">Room Code</span>
+                  <p className="text-sm font-bold mt-0.5 text-white dark:text-primary-foreground">{tenant.room}</p>
                 </div>
                 <div>
-                  <span className="text-[9px] opacity-75 uppercase tracking-wide font-semibold">PG Bed Allocation</span>
-                  <p className="text-sm font-bold mt-0.5">{tenant.bed}</p>
+                  <span className="text-[9px] opacity-75 uppercase tracking-wide font-semibold text-white/80 dark:text-primary-foreground/80">PG Bed Allocation</span>
+                  <p className="text-sm font-bold mt-0.5 text-white dark:text-primary-foreground">{tenant.bed}</p>
                 </div>
               </div>
             </CardContent>
 
             {/* Interactive Gate Access Pass Drawer/Triggers */}
             <div 
-              className="bg-slate-900/10 border-t border-white/5 p-4 flex items-center justify-between cursor-pointer hover:bg-slate-900/20 transition-all"
+              className="bg-slate-900/10 dark:bg-black/20 border-t border-white/5 dark:border-black/5 p-4 flex items-center justify-between cursor-pointer hover:bg-slate-900/20 dark:hover:bg-black/30 transition-all"
               onClick={() => setShowGatePass(true)}
             >
               <div className="flex flex-col gap-0.5">
-                <h3 className="text-xs font-bold flex items-center gap-1.5 text-white">
-                  <QrCode className="size-4 text-emerald-400" />
+                <h3 className="text-xs font-bold flex items-center gap-1.5 text-white dark:text-primary-foreground">
+                  <QrCode className="size-4 text-emerald-400 dark:text-emerald-600" />
                   Gate Access Pass
                 </h3>
-                <p className="text-[10px] text-white/70">Scan QR Code at security turnstiles</p>
+                <p className="text-[10px] text-white/70 dark:text-primary-foreground/75">Scan QR Code at security turnstiles</p>
               </div>
               <div className="w-12 h-12 bg-white p-1 rounded-lg border border-white/15 flex-shrink-0 flex items-center justify-center shadow-inner">
                 {/* Styled mock QR grid */}
@@ -186,7 +190,7 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-slate-900 dark:text-white">Lease Agreement</h4>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Valid till Dec 2026</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Valid till {tenant.leaseEndDate || 'Dec 14, 2026'}</p>
                   </div>
                 </div>
                 <ChevronRight className="size-4 text-slate-300 group-hover:text-primary transition-colors" />
@@ -330,15 +334,22 @@ export default function ProfilePage() {
             </div>
             <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
               <span className="text-slate-400">Lease Expiry</span>
-              <span className="font-semibold text-slate-900 dark:text-white">Dec 14, 2026</span>
+              <span className="font-semibold text-slate-900 dark:text-white">{tenant.leaseEndDate || 'Dec 14, 2026'}</span>
             </div>
             <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
               <span className="text-slate-400">Monthly Rent Dues</span>
-              <span className="font-semibold text-slate-900 dark:text-white">$1,250.00 / month</span>
+              <span className="font-semibold text-slate-900 dark:text-white">
+                {(() => {
+                  const rentBill = bills.find(b => b.category === 'Rent');
+                  return rentBill 
+                    ? `$${rentBill.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / month` 
+                    : '$1,250.00 / month';
+                })()}
+              </span>
             </div>
             <div className="flex justify-between py-2">
               <span className="text-slate-400">Security Deposit Refundable</span>
-              <span className="font-semibold text-slate-900 dark:text-white">$2,500.00</span>
+              <span className="font-semibold text-slate-900 dark:text-white">{tenant.deposit || '$2,500.00'}</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border border-slate-100 dark:border-slate-800 flex gap-2.5 mt-2">

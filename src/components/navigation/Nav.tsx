@@ -11,7 +11,9 @@ import {
   Users, 
   User, 
   Bell, 
-  LogOut 
+  LogOut,
+  Coffee,
+  Megaphone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,17 +29,27 @@ import {
 export const Nav: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
-  const { tenant, notifications, logout } = useApp();
+  const { tenant, notifications, logout, userRole } = useApp();
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const navItems = [
+  const tenantItems = [
     { label: 'Home', href: '/', icon: LayoutDashboard },
     { label: 'Payments', href: '/payments', icon: CreditCard },
     { label: 'Services', href: '/services', icon: Wrench },
     { label: 'Community', href: '/community', icon: Users },
     { label: 'Profile', href: '/profile', icon: User },
   ];
+
+  const ownerItems = [
+    { label: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { label: 'Payments', href: '/payments', icon: CreditCard },
+    { label: 'Tickets', href: '/services', icon: Wrench },
+    { label: 'Notices', href: '/notices', icon: Megaphone },
+    { label: 'Meals', href: '/meals', icon: Coffee },
+  ];
+
+  const navItems = userRole === 'Owner' ? ownerItems : tenantItems;
 
   return (
     <>
@@ -49,7 +61,7 @@ export const Nav: React.FC = () => {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-lg shadow-sm">
               P
             </div>
-            <span className="font-bold text-xl tracking-tight text-primary dark:text-primary-foreground">
+            <span className="font-bold text-xl tracking-tight text-primary dark:text-primary">
               PG Connect
             </span>
           </Link>
@@ -63,7 +75,7 @@ export const Nav: React.FC = () => {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`hover:text-primary dark:hover:text-primary-foreground transition-colors relative py-5 ${
+                className={`hover:text-primary dark:hover:text-primary transition-colors relative py-5 ${
                   isActive 
                     ? 'text-primary dark:text-white font-semibold after:content-[""] after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary' 
                     : ''
@@ -92,12 +104,8 @@ export const Nav: React.FC = () => {
 
           {/* User Dropdown */}
           <DropdownMenu>
-            <DropdownMenuTrigger className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800 focus:outline-none transition-transform active:scale-95 flex items-center justify-center shrink-0 cursor-pointer">
-              <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80"
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
+            <DropdownMenuTrigger className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800 focus:outline-none transition-transform active:scale-95 flex items-center justify-center shrink-0 cursor-pointer bg-primary/10 text-primary font-bold text-xs uppercase select-none">
+              {tenant.name.split(' ').map(n => n[0]).join('') || 'U'}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuGroup>
@@ -138,7 +146,7 @@ export const Nav: React.FC = () => {
               href={item.href}
               className={`flex flex-col items-center justify-center transition-all duration-200 active:scale-90 ${
                 isActive
-                  ? 'bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-foreground rounded-2xl px-5 py-2'
+                  ? 'bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary rounded-2xl px-5 py-2'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-3 py-2'
               }`}
             >

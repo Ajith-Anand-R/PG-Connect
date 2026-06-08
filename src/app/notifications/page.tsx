@@ -42,7 +42,7 @@ export default function NotificationsPage() {
 
   const getNotificationIconBg = (title: string, read: boolean) => {
     if (!read) {
-      return 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-fixed-dim';
+      return 'bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary';
     }
     return 'bg-slate-100 text-slate-500 dark:bg-slate-900 dark:text-slate-400';
   };
@@ -52,9 +52,9 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const earlierNotifications = [
-    { id: 'notif-e1', title: 'New Community Post', description: 'Sarah Jenkins posted \'Moving Sale\' in the resident feed.', timestamp: 'Yesterday', read: true },
-    { id: 'notif-e2', title: 'Water Supply Notice', description: 'Reminder: Water maintenance scheduled for tonight at 10 PM.', timestamp: 'Yesterday', read: true },
-    { id: 'notif-e3', title: 'Package Delivered', description: 'A package from Amazon is waiting at the front desk.', timestamp: 'Nov 12', read: true },
+    { id: 'notif-e1', title: 'New Community Post', description: 'A new post was published in the resident feed.', timestamp: 'Yesterday', read: true },
+    { id: 'notif-e2', title: 'Water Supply Notice', description: 'Reminder: Scheduled water tank maintenance is complete.', timestamp: 'Yesterday', read: true },
+    { id: 'notif-e3', title: 'Package Received', description: 'A courier package has been received at the security front desk.', timestamp: '2 days ago', read: true },
   ];
 
   return (
@@ -106,7 +106,7 @@ export default function NotificationsPage() {
             <div className="flex items-center justify-between px-1">
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">Today</h2>
               {unreadCount > 0 && (
-                <Badge variant="secondary" className="bg-primary/10 text-primary dark:text-primary-fixed-dim border-transparent font-bold text-[10px] py-0.5 px-2">
+                <Badge variant="secondary" className="bg-primary/10 text-primary dark:text-primary border-transparent font-bold text-[10px] py-0.5 px-2">
                   {unreadCount} New
                 </Badge>
               )}

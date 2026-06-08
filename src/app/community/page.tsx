@@ -68,52 +68,50 @@ export default function CommunityPage() {
   // Comments inputs mapping (post.id -> string)
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
 
-  // Resident Feed Initial State
-  const [feed, setFeed] = useState<FeedPost[]>([
-    {
-      id: 'post-1',
-      author: 'Sarah Jenkins',
-      room: 'Apt 305',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
-      time: '2 hrs ago',
-      category: 'Marketplace',
-      type: 'Selling',
-      title: 'Moving Sale - IKEA Desk & Chair',
-      content: 'Moving out next week. Selling my barely used BEKANT desk and matching chair. $150 for both. Pick up from 3rd floor.',
-      image: 'https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?auto=format&fit=crop&w=600&q=80',
-      likes: 4,
-      comments: [
+  const [feed, setFeed] = useState<FeedPost[]>([]);
+
+  /* eslint-disable react-hooks/set-state-in-effect */
+  React.useEffect(() => {
+    if (tenant && tenant.pgName && tenant.pgName !== "Loading PG...") {
+      setFeed([
         {
-          id: 'c1',
-          author: 'Kabir Dev',
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80',
-          text: 'Is the price negotiable? I might be interested in just the chair.',
-          time: '1 hr ago'
-        }
-      ]
-    },
-    {
-      id: 'post-2',
-      author: 'Marcus K.',
-      room: 'Apt 112',
-      avatar: '',
-      time: '5 hrs ago',
-      category: 'Discussion',
-      type: 'Discussion',
-      title: 'Package Delivery Issue',
-      content: 'Has anyone else had issues with Amazon drivers leaving packages outside the main gate instead of the lobby parcel room recently? Happened to me twice this week.',
-      likes: 2,
-      comments: [
+          id: 'post-1',
+          author: 'Rohit Sharma',
+          room: 'Room 304',
+          avatar: '',
+          time: '2 hours ago',
+          category: 'Discussion',
+          type: 'Discussion',
+          title: `Speed of Wi-Fi in ${tenant.pgName}`,
+          content: `Is anyone else experiencing slow internet speeds in Wing B today? The router seems to be blinking fine but pages are taking forever to load.`,
+          likes: 4,
+          comments: [
+            {
+              id: 'c-1',
+              author: 'Aarav Mehta',
+              avatar: '',
+              text: 'Yes, same here. I raised a service request. Management said they are looking into it.',
+              time: '1 hour ago'
+            }
+          ]
+        },
         {
-          id: 'c2',
-          author: 'David R.',
-          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=100&q=80',
-          text: 'Yes! I had to walk around the block to find mine yesterday. I\'ve reported it to management.',
-          time: '2 hrs ago'
+          id: 'post-2',
+          author: 'Priya Patel',
+          room: 'Room 201',
+          avatar: '',
+          time: '5 hours ago',
+          category: 'Marketplace',
+          type: 'Selling',
+          title: 'Selling study desk & ergonomic chair',
+          content: `Moving out next week and selling my almost-new study table with an ergonomic chair. Price: $80. DM if interested.`,
+          likes: 2,
+          comments: []
         }
-      ]
+      ]);
     }
-  ]);
+  }, [tenant]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleLike = (postId: string) => {
     setFeed(prev => prev.map(post => {
@@ -250,7 +248,7 @@ export default function CommunityPage() {
                         isUrgent 
                           ? 'bg-destructive/10 text-destructive' 
                           : notice.category === 'Event'
-                          ? 'bg-primary/10 text-primary dark:text-primary-fixed-dim'
+                          ? 'bg-primary/10 text-primary dark:text-primary'
                           : 'bg-secondary/10 text-secondary'
                       } border-transparent text-[10px] font-bold py-0.5 px-2 rounded-full`}>
                         {notice.category}
@@ -443,7 +441,7 @@ export default function CommunityPage() {
                     selectedNotice.category === 'Maintenance' 
                       ? 'bg-destructive/10 text-destructive' 
                       : selectedNotice.category === 'Event'
-                      ? 'bg-primary/10 text-primary dark:text-primary-fixed-dim'
+                      ? 'bg-primary/10 text-primary dark:text-primary'
                       : 'bg-secondary/10 text-secondary'
                   } border-transparent text-[10px] font-bold py-0.5 px-2 rounded-full`}>
                     {selectedNotice.category}

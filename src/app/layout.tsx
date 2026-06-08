@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
 import { AppContentWrapper } from "@/components/layout/AppContentWrapper";
 
-const inter = Inter({
+const sansFont = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-sans",
 });
@@ -15,7 +15,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  themeColor: "#0052cc",
+  themeColor: "#2563eb",
 };
 
 export const metadata: Metadata = {
@@ -37,9 +37,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} h-full antialiased dark`}
+      className={`${sansFont.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 flex flex-col pb-20 md:pb-0 pt-16">
+      <body className="min-h-full bg-slate-50/70 text-slate-900 flex flex-col pb-20 md:pb-0 pt-16">
         <AppProvider>
           <AppContentWrapper>
             {children}
