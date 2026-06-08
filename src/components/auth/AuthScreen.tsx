@@ -94,7 +94,7 @@ export const AuthScreen: React.FC = () => {
     setIsLoading(true);
     setError(null);
     
-    const res = await register(name, email, phone, password, role);
+    const res = await register(name, email, phone, password, role, building);
     setIsLoading(false);
     if (res.error) {
       setError(res.error);
@@ -124,11 +124,7 @@ export const AuthScreen: React.FC = () => {
                     <img 
                       alt="PG Connect Logo" 
                       className="w-12 h-12 rounded-xl object-cover" 
-                      src="https://lh3.googleusercontent.com/aida/AP1WRLtybtGmM0XG20UeipAMi5XbPgbwzq46dVhNyJb1BGcdUKDlSPfgA32f8oM1ZpMu_1OA-p4MntIGau5aJPqtq8tCb0_gbnNdc8X_4AlMotQgJuGxX7YcHlstUg3cjCfHy5ihr5T476ReCsA7gxosDqc7LJv9Xdno_6utiqtO-K4IslhuEwHTWdHecg963cHtA9cWzPqsjFRQUJWIjzn-_xyq6tA6CEO8aCcMwTU0Ugin_GMVFeIENikDpQ"
-                      onError={(e) => {
-                        // fallback if logo URL fails to load
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
+                      src="/logo.png"
                     />
                     {/* Glowing effect inside logo box */}
                     <div className="absolute inset-0 bg-gradient-to-tr from-blue-600/10 to-transparent pointer-events-none" />
@@ -299,7 +295,7 @@ export const AuthScreen: React.FC = () => {
                 {/* Content Overlay */}
                 <div className="relative z-10">
                   <div className="flex items-center gap-2 mb-8">
-                    <Building2 className="text-blue-400 size-6" />
+                    <img src="/logo.png" alt="PG Connect Logo" className="size-6 rounded-md object-cover shadow-xs" />
                     <span className="font-extrabold text-lg tracking-tight">PG Connect</span>
                   </div>
                   <h2 className="text-3xl font-bold tracking-tight text-white leading-tight">Welcome Home.</h2>
@@ -325,7 +321,7 @@ export const AuthScreen: React.FC = () => {
               <div className="col-span-1 md:col-span-7 p-6 md:p-8 flex flex-col justify-center bg-white dark:bg-[#131c2e]">
                 {/* Mobile Branding Header */}
                 <div className="flex md:hidden items-center gap-2 mb-6">
-                  <Building2 className="text-[#003d9b] dark:text-blue-400 size-6" />
+                  <img src="/logo.png" alt="PG Connect Logo" className="size-6 rounded-md object-cover shadow-xs" />
                   <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">PG Connect</span>
                 </div>
 
@@ -431,26 +427,45 @@ export const AuthScreen: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="building">Building / PG Location</label>
-                    <div className="relative flex items-center">
-                      <Building2 className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
-                      <select 
-                        id="building" 
-                        value={building}
-                        onChange={(e) => setBuilding(e.target.value)}
-                        required
-                        disabled={isLoading}
-                        className="w-full h-10 pl-10 pr-10 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
-                      >
-                        <option value="" disabled>Select your PG Location</option>
-                        {pgsList.map(pg => (
-                          <option key={pg.id} value={pg.id}>{pg.name}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="size-4 absolute right-3.5 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                  {role === 'Tenant' ? (
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="inviteToken">Invite Token</label>
+                      <div className="relative flex items-center">
+                        <Building2 className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
+                        <input 
+                          className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
+                          id="inviteToken" 
+                          placeholder="e.g. INV-XXXXXX" 
+                          type="text"
+                          value={building}
+                          onChange={(e) => setBuilding(e.target.value.toUpperCase())}
+                          required
+                          disabled={isLoading}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="building">Building / PG Location</label>
+                      <div className="relative flex items-center">
+                        <Building2 className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
+                        <select 
+                          id="building" 
+                          value={building}
+                          onChange={(e) => setBuilding(e.target.value)}
+                          required
+                          disabled={isLoading}
+                          className="w-full h-10 pl-10 pr-10 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                        >
+                          <option value="" disabled>Select your PG Location</option>
+                          {pgsList.map(pg => (
+                            <option key={pg.id} value={pg.id}>{pg.name}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="size-4 absolute right-3.5 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Password with Toggle */}
                   <div className="space-y-1">

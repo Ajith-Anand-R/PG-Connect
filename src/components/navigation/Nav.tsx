@@ -37,6 +37,7 @@ export const Nav: React.FC = () => {
     { label: 'Home', href: '/', icon: LayoutDashboard },
     { label: 'Payments', href: '/payments', icon: CreditCard },
     { label: 'Services', href: '/services', icon: Wrench },
+    { label: 'Notices', href: '/notices', icon: Megaphone },
     { label: 'Community', href: '/community', icon: Users },
     { label: 'Profile', href: '/profile', icon: User },
   ];
@@ -58,9 +59,7 @@ export const Nav: React.FC = () => {
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2">
             {/* Mini Logo */}
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-lg shadow-sm">
-              P
-            </div>
+            <img src="/logo.png" alt="PG Connect Logo" className="w-8 h-8 rounded-lg object-cover shadow-sm" />
             <span className="font-bold text-xl tracking-tight text-primary dark:text-primary">
               PG Connect
             </span>

@@ -43,9 +43,7 @@ export default function ServicesPage() {
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
 
   // Rating State for past requests
-  const [ratings, setRatings] = useState<Record<string, number>>({
-    'req-2': 5
-  });
+  const [ratings, setRatings] = useState<Record<string, number>>({});
   const [ratingTarget, setRatingTarget] = useState<string | null>(null);
   const [tempRating, setTempRating] = useState(0);
 

@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
+const DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
 // Types
 export interface TenantInfo {
   id: string; // Tenant ID (bigint as string) or User ID (uuid)
@@ -158,7 +160,7 @@ interface AppContextType {
   menuList: Menu[];
   payBill: (id: string) => void;
   addRequest: (category: string, title: string, description: string, priority: 'Low' | 'Medium' | 'High') => void;
-  addGuestPass: (name: string, relation: string, phone: string, date: string, entryTime: string, exitTime: string) => void;
+  addGuestPass: (name: string, relation: string, phone: string, date: string, entryTime: string, exitTime: string) => Promise<void> | void;
   sendChatMessage: (threadId: string, text: string) => void;
   markNotificationsAsRead: () => void;
   meals: {
@@ -173,7 +175,7 @@ interface AppContextType {
   userRole: 'Owner' | 'Tenant' | null;
   login: (emailOrPhone: string, password?: string) => Promise<{ error: string | null }>;
   logout: () => void;
-  register: (name: string, email: string, phone: string, password?: string, role?: string) => Promise<{ error: string | null }>;
+  register: (name: string, email: string, phone: string, password?: string, role?: string, pgId?: string) => Promise<{ error: string | null }>;
   
   // Owner States & Actions
   allTenants: OwnerTenant[];
@@ -198,6 +200,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userRole, setUserRole] = useState<'Owner' | 'Tenant' | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [pgId, setPgId] = useState<number | null>(null);
 
 
   // 1. Tenant Info
@@ -270,6 +273,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setUserRole(role);
 
 
+      if (userProfile.pg_id) {
+        setPgId(Number(userProfile.pg_id));
+      }
+
       // Set Meals state
       setMeals({
         breakfast: userProfile.meal_breakfast ?? true,
@@ -278,10 +285,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         dietary: (userProfile.meal_dietary as 'Veg' | 'Non-Veg' | 'Egg') ?? 'Veg'
       });
 
-      // 2. Fetch notices (common to both)
+      // 2. Fetch notices (filtered by pg_id)
       const { data: dbNotices } = await supabase
         .from('notices')
         .select('*')
+        .eq('pg_id', userProfile.pg_id)
         .order('created_at', { ascending: false });
 
       if (dbNotices) {
@@ -294,23 +302,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         })));
       }
 
-      // 3. Fetch menus (common to both)
-      const { data: dbMenus } = await supabase
-        .from('menus')
-        .select('*')
-        .order('id', { ascending: true });
+      // 3. Fetch menus (filtered by pg_id and current week's dates)
+      const getCurrentWeekDates = () => {
+        const current = new Date();
+        const week = [];
+        const day = current.getDay();
+        const diff = current.getDate() - day + (day === 0 ? -6 : 1);
+        const monday = new Date(current.setDate(diff));
+        for (let i = 0; i < 7; i++) {
+          const nextDay = new Date(monday);
+          nextDay.setDate(monday.getDate() + i);
+          week.push(nextDay.toISOString().split('T')[0]);
+        }
+        return week;
+      };
 
-      if (dbMenus) {
-        setMenuList(dbMenus.map((m: { day: string; breakfast: string; lunch: string; dinner: string; breakfast_time: string; lunch_time: string; dinner_time: string }) => ({
-          day: m.day,
-          breakfast: m.breakfast,
-          lunch: m.lunch,
-          dinner: m.dinner,
-          breakfastTime: m.breakfast_time,
-          lunchTime: m.lunch_time,
-          dinnerTime: m.dinner_time
-        })));
+      const dates = getCurrentWeekDates();
+      const { data: dbMenuDays } = await supabase
+        .from('menu_days')
+        .select('*, menu_items(*)')
+        .eq('pg_id', userProfile.pg_id)
+        .in('date', dates);
+
+      const menuMap: Record<string, Menu> = {};
+      DAYS_OF_WEEK.forEach((day: string) => {
+        menuMap[day] = {
+          day,
+          breakfast: "Not Scheduled",
+          lunch: "Not Scheduled",
+          dinner: "Not Scheduled",
+          breakfastTime: "08:00 AM - 10:00 AM",
+          lunchTime: "01:00 PM - 03:00 PM",
+          dinnerTime: "08:00 PM - 10:00 PM"
+        };
+      });
+
+      if (dbMenuDays) {
+        dbMenuDays.forEach((dayRecord: { date: string; menu_items: Array<{ meal_type: string; item_name: string; serve_time?: string }> }) => {
+          const dateObj = new Date(dayRecord.date);
+          let dayIndex = dateObj.getDay() - 1;
+          if (dayIndex < 0) dayIndex = 6;
+          const dayName = DAYS_OF_WEEK[dayIndex];
+          
+          if (menuMap[dayName]) {
+            (dayRecord.menu_items || []).forEach((item) => {
+              if (item.meal_type === 'breakfast') {
+                menuMap[dayName].breakfast = item.item_name;
+                if (item.serve_time) menuMap[dayName].breakfastTime = item.serve_time;
+              } else if (item.meal_type === 'lunch') {
+                menuMap[dayName].lunch = item.item_name;
+                if (item.serve_time) menuMap[dayName].lunchTime = item.serve_time;
+              } else if (item.meal_type === 'dinner') {
+                menuMap[dayName].dinner = item.item_name;
+                if (item.serve_time) menuMap[dayName].dinnerTime = item.serve_time;
+              }
+            });
+          }
+        });
       }
+      setMenuList(Object.values(menuMap));
 
       if (role === 'Tenant') {
         // Fetch Tenant specific data
@@ -346,49 +396,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           };
           setTenant(tInfo);
 
+          // Fetch Guest Passes from visitor_logs database table
+          const { data: dbVisitors } = await supabase
+            .from('visitor_logs')
+            .select('*')
+            .eq('tenant_id', tenantDetails.id)
+            .order('id', { ascending: false });
+
+          if (dbVisitors) {
+            setGuestPasses(dbVisitors.map((v: { id: number; visitor_name: string; relationship: string; phone: string; date: string; entry_time: string; exit_time: string; qr_code_token: string }) => ({
+              id: v.id.toString(),
+              visitorName: v.visitor_name,
+              relationship: v.relationship,
+              phone: v.phone,
+              date: v.date,
+              entryTime: v.entry_time,
+              exitTime: v.exit_time,
+              qrCodeToken: v.qr_code_token
+            })));
+          }
+
           // Seed dynamic chats
-          setChats([
-            {
-              id: "thread-1",
-              title: "Roommates Chat",
-              subtitle: `Active members in ${tenantDetails.rooms ? `Room ${tenantDetails.rooms.room_number}` : 'Room 302'}`,
-              avatar: "",
-              messages: [
-                {
-                  id: "msg-1",
-                  senderName: "Kabir",
-                  senderAvatar: "",
-                  text: "Hey, who's cleaning the common area today?",
-                  timestamp: "10:15 AM",
-                  isSelf: false
-                },
-                {
-                  id: "msg-2",
-                  senderName: userProfile.name,
-                  senderAvatar: "",
-                  text: "I'll do it in the evening after work.",
-                  timestamp: "10:20 AM",
-                  isSelf: true
-                }
-              ]
-            },
-            {
-              id: "thread-2",
-              title: `${tenantDetails.pgs ? tenantDetails.pgs.name : 'NestHaven PG'} Helpdesk`,
-              subtitle: "Property management and support staff",
-              avatar: "",
-              messages: [
-                {
-                  id: "msg-3",
-                  senderName: "Manager (Rajesh)",
-                  senderAvatar: "",
-                  text: "Hi residents, wifi router in Wing B has been restarted. Please check if connectivity is restored.",
-                  timestamp: "Yesterday",
-                  isSelf: false
-                }
-              ]
-            }
-          ]);
+          setChats([]);
 
           // Fetch Bills
           const { data: dbPayments } = await supabase
@@ -460,7 +489,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const { data: dbUsersMeals } = await supabase
           .from('users')
           .select('meal_breakfast, meal_lunch, meal_dinner, meal_dietary')
-          .eq('role', 'Tenant');
+          .eq('role', 'Tenant')
+          .eq('pg_id', userProfile.pg_id);
 
         if (dbUsersMeals) {
           let bCount = 0, lCount = 0, dCount = 0;
@@ -563,9 +593,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Register
-  const register = async (name: string, email: string, phone: string, password?: string, role?: string) => {
+  const register = async (name: string, email: string, phone: string, password?: string, role?: string, pgIdOrToken?: string) => {
     try {
       const selectedRole = role || 'Tenant';
+      const isTenant = selectedRole === 'Tenant';
       const { error } = await supabase.auth.signUp({
         email,
         password: password || 'password123',
@@ -573,7 +604,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           data: {
             name,
             phone,
-            role: selectedRole // triggers copy into public.users with the chosen role
+            role: selectedRole,
+            invite_token: isTenant ? pgIdOrToken : null,
+            pg_id: !isTenant && pgIdOrToken ? Number(pgIdOrToken) : null
           }
         }
       });
@@ -645,19 +678,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Add Guest Pass (Local state only, or can persist in session storage)
-  const addGuestPass = (name: string, relation: string, phone: string, date: string, entryTime: string, exitTime: string) => {
-    const newPass: GuestPass = {
-      id: `pass-${Date.now()}`,
-      visitorName: name,
-      relationship: relation,
-      phone,
-      date,
-      entryTime,
-      exitTime,
-      qrCodeToken: `PASS-${name.slice(0,3).toUpperCase()}-${Math.floor(100000 + Math.random() * 900000)}`
-    };
-    setGuestPasses(prev => [newPass, ...prev]);
+  // Add Guest Pass (Database backed)
+  const addGuestPass = async (name: string, relation: string, phone: string, date: string, entryTime: string, exitTime: string) => {
+    if (!userId) return;
+    try {
+      const { data: tenantDetails } = await supabase
+        .from('tenants')
+        .select('id, pg_id')
+        .eq('user_id', userId)
+        .single();
+
+      if (tenantDetails) {
+        const qrCodeToken = `PASS-${name.slice(0,3).toUpperCase()}-${Math.floor(100000 + Math.random() * 900000)}`;
+        const { error } = await supabase
+          .from('visitor_logs')
+          .insert({
+            pg_id: tenantDetails.pg_id,
+            tenant_id: tenantDetails.id,
+            visitor_name: name,
+            relationship: relation,
+            phone,
+            date,
+            entry_time: entryTime,
+            exit_time: exitTime,
+            status: 'approved',
+            qr_code_token: qrCodeToken
+          });
+
+        if (error) throw error;
+      }
+    } catch (err) {
+      console.error('Error adding guest pass:', err);
+    }
   };
 
   // Send Chat message (Local state only)
@@ -765,11 +817,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Owner Action: Add Notice
   const addNotice = async (title: string, message: string) => {
+    if (!pgId) return;
     try {
       const { error } = await supabase
         .from('notices')
         .insert({
-          pg_id: 1, // Seeded NestHaven PG
+          pg_id: pgId,
           title,
           message
         });

@@ -2,8 +2,8 @@ const CACHE_NAME = 'tenancy-os-cache-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',
-  '/icons/icon-192x192.svg',
-  '/icons/icon-512x512.svg'
+  '/icon-192.png',
+  '/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {

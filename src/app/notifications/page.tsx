@@ -51,11 +51,7 @@ export default function NotificationsPage() {
   // In AppContext, we have 2 notifications. Let's list them nicely. We can also add some static mock ones for "Earlier" to match the full page feel!
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const earlierNotifications = [
-    { id: 'notif-e1', title: 'New Community Post', description: 'A new post was published in the resident feed.', timestamp: 'Yesterday', read: true },
-    { id: 'notif-e2', title: 'Water Supply Notice', description: 'Reminder: Scheduled water tank maintenance is complete.', timestamp: 'Yesterday', read: true },
-    { id: 'notif-e3', title: 'Package Received', description: 'A courier package has been received at the security front desk.', timestamp: '2 days ago', read: true },
-  ];
+  const earlierNotifications: { id: string; title: string; description: string; timestamp: string; read: boolean }[] = [];
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">

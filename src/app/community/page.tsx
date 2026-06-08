@@ -70,48 +70,7 @@ export default function CommunityPage() {
 
   const [feed, setFeed] = useState<FeedPost[]>([]);
 
-  /* eslint-disable react-hooks/set-state-in-effect */
-  React.useEffect(() => {
-    if (tenant && tenant.pgName && tenant.pgName !== "Loading PG...") {
-      setFeed([
-        {
-          id: 'post-1',
-          author: 'Rohit Sharma',
-          room: 'Room 304',
-          avatar: '',
-          time: '2 hours ago',
-          category: 'Discussion',
-          type: 'Discussion',
-          title: `Speed of Wi-Fi in ${tenant.pgName}`,
-          content: `Is anyone else experiencing slow internet speeds in Wing B today? The router seems to be blinking fine but pages are taking forever to load.`,
-          likes: 4,
-          comments: [
-            {
-              id: 'c-1',
-              author: 'Aarav Mehta',
-              avatar: '',
-              text: 'Yes, same here. I raised a service request. Management said they are looking into it.',
-              time: '1 hour ago'
-            }
-          ]
-        },
-        {
-          id: 'post-2',
-          author: 'Priya Patel',
-          room: 'Room 201',
-          avatar: '',
-          time: '5 hours ago',
-          category: 'Marketplace',
-          type: 'Selling',
-          title: 'Selling study desk & ergonomic chair',
-          content: `Moving out next week and selling my almost-new study table with an ergonomic chair. Price: $80. DM if interested.`,
-          likes: 2,
-          comments: []
-        }
-      ]);
-    }
-  }, [tenant]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+
 
   const handleLike = (postId: string) => {
     setFeed(prev => prev.map(post => {
