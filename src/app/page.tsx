@@ -34,7 +34,7 @@ export default function DashboardPage() {
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const tomorrowIndex = (new Date().getDay() + 1) % 7;
   const tomorrowDayName = daysOfWeek[tomorrowIndex];
-  const tomorrowMenu = menuList.find(m => m.day === tomorrowDayName) || menuList.find(m => m.day === 'Wed');
+  const tomorrowMenu = menuList.find(m => m.day === tomorrowDayName);
 
   const handlePay = () => {
     if (!electricityBill) return;
@@ -148,19 +148,25 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="bg-secondary/10 dark:bg-secondary/20 rounded-xl p-4 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center text-secondary flex-shrink-0">
-              <UtensilsCrossed className="size-5" />
+          {!tomorrowMenu ? (
+            <div className="bg-slate-50/50 dark:bg-slate-900/40 rounded-xl p-4 text-center text-slate-500 dark:text-slate-400 border border-slate-100/60 dark:border-slate-800/40">
+              <p className="text-xs font-semibold">No breakfast service scheduled for tomorrow</p>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">
-                {tomorrowMenu ? tomorrowMenu.breakfast : 'Masala Dosa, Sambar, Chutney & Filter Coffee'}
-              </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Served {tomorrowMenu ? tomorrowMenu.breakfastTime : '7:30 AM - 9:30 AM'} • Vegetarian
-              </p>
+          ) : (
+            <div className="bg-secondary/10 dark:bg-secondary/20 rounded-xl p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center text-secondary flex-shrink-0">
+                <UtensilsCrossed className="size-5" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                  {tomorrowMenu.breakfast}
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Served {tomorrowMenu.breakfastTime} • Vegetarian
+                </p>
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
