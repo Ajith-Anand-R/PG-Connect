@@ -27,6 +27,10 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "PG Connect",
   },
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({
