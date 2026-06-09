@@ -12,7 +12,14 @@ import {
   User, 
   ArrowRight, 
   ShieldCheck,
-  Building2
+  Building2,
+  ArrowLeft,
+  Check,
+  Calendar,
+  Hash,
+  Users,
+  Briefcase,
+  Home
 } from 'lucide-react';
 
 
@@ -32,6 +39,27 @@ export const AuthScreen: React.FC = () => {
   const [password, setPassword] = useState('');
   const [rememberDevice, setRememberDevice] = useState(false);
   
+  // Admission Form Additional states
+  const [dob, setDob] = useState('');
+  const [age, setAge] = useState('');
+  const [bloodGroup, setBloodGroup] = useState('');
+  const [fatherName, setFatherName] = useState('');
+  const [fatherPhone, setFatherPhone] = useState('');
+  const [idProofType, setIdProofType] = useState('Aadhaar');
+  const [idNumber, setIdNumber] = useState('');
+  const [expectedStay, setExpectedStay] = useState('');
+  const [occupation, setOccupation] = useState('');
+  const [permanentAddress, setPermanentAddress] = useState('');
+  const [previousAddress, setPreviousAddress] = useState('');
+  const [officeName, setOfficeName] = useState('');
+  const [officeAddress, setOfficeAddress] = useState('');
+  const [officePhone, setOfficePhone] = useState('');
+  const [reference1, setReference1] = useState('');
+  const [reference2, setReference2] = useState('');
+
+  // Wizard state
+  const [step, setStep] = useState(1);
+  
   // UI states
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,6 +74,105 @@ export const AuthScreen: React.FC = () => {
     setBuilding('');
     setPassword('');
     setRole('Tenant');
+    setDob('');
+    setAge('');
+    setBloodGroup('');
+    setFatherName('');
+    setFatherPhone('');
+    setIdProofType('Aadhaar');
+    setIdNumber('');
+    setExpectedStay('');
+    setOccupation('');
+    setPermanentAddress('');
+    setPreviousAddress('');
+    setOfficeName('');
+    setOfficeAddress('');
+    setOfficePhone('');
+    setReference1('');
+    setReference2('');
+    setStep(1);
+  };
+
+  const validateStep = (currentStep: number): boolean => {
+    setError(null);
+    if (currentStep === 1) {
+      if (!building.trim()) {
+        setError("Invite Token is required.");
+        return false;
+      }
+      if (!email.trim()) {
+        setError("Email is required.");
+        return false;
+      }
+      if (!phone.trim()) {
+        setError("Phone number is required.");
+        return false;
+      }
+      if (!password.trim()) {
+        setError("Password is required.");
+        return false;
+      }
+      if (password.length < 8) {
+        setError("Password must be at least 8 characters.");
+        return false;
+      }
+    } else if (currentStep === 2) {
+      if (!name.trim()) {
+        setError("Full Name is required.");
+        return false;
+      }
+      if (!dob) {
+        setError("Date of Birth is required.");
+        return false;
+      }
+      if (!age.trim()) {
+        setError("Age is required.");
+        return false;
+      }
+      if (!bloodGroup.trim()) {
+        setError("Blood Group is required.");
+        return false;
+      }
+      if (!fatherName.trim()) {
+        setError("Father's Name is required.");
+        return false;
+      }
+      if (!fatherPhone.trim()) {
+        setError("Father's Contact Number is required.");
+        return false;
+      }
+    } else if (currentStep === 3) {
+      if (!idNumber.trim()) {
+        setError("ID/Aadhaar Number is required.");
+        return false;
+      }
+      if (!expectedStay.trim()) {
+        setError("Expected Period of Stay is required.");
+        return false;
+      }
+      if (!occupation.trim()) {
+        setError("Occupation is required.");
+        return false;
+      }
+    } else if (currentStep === 4) {
+      if (!permanentAddress.trim()) {
+        setError("Permanent Address is required.");
+        return false;
+      }
+      if (!previousAddress.trim()) {
+        setError("Previous Address is required.");
+        return false;
+      }
+      if (!reference1.trim()) {
+        setError("Reference (1) Name, Address & Phone is required.");
+        return false;
+      }
+      if (!reference2.trim()) {
+        setError("Reference (2) Name, Address & Phone is required.");
+        return false;
+      }
+    }
+    return true;
   };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -68,20 +195,38 @@ export const AuthScreen: React.FC = () => {
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !phone.trim() || !building || !password.trim()) {
-      setError("Please fill in all fields.");
-      return;
-    }
-
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
+    
+    // Validate all steps from 1 to 4
+    for (let i = 1; i <= 4; i++) {
+      if (!validateStep(i)) {
+        setStep(i);
+        return;
+      }
     }
     
     setIsLoading(true);
     setError(null);
     
-    const res = await register(name, email, phone, password, role, building);
+    const additionalDetails = {
+      dob,
+      age: parseInt(age) || null,
+      blood_group: bloodGroup,
+      father_name: fatherName,
+      father_phone: fatherPhone,
+      id_proof_type: idProofType,
+      aadhaar_number: idNumber,
+      expected_stay: expectedStay,
+      occupation,
+      permanent_address: permanentAddress,
+      previous_address: previousAddress,
+      office_name: officeName,
+      office_address: officeAddress,
+      office_phone: officePhone,
+      reference_1: reference1,
+      reference_2: reference2
+    };
+
+    const res = await register(name, email, phone, password, role, building, additionalDetails);
     setIsLoading(false);
     if (res.error) {
       setError(res.error);
@@ -273,8 +418,8 @@ export const AuthScreen: React.FC = () => {
                 <div className="absolute inset-0 z-0 opacity-35 pointer-events-none">
                   <img 
                     className="w-full h-full object-cover" 
-                    alt="Modern complex visual background" 
-                    src="https://lh3.googleusercontent.com/aida/AP1WRLvcg5Bw_1ggyVkZCC2Z0rNdMx_v0ignlNsK1oqSe3FmBYJb_GglfqZd_sreyLDjv4gAQgaDBzHMJKlahkXYAb33G2LX4GhA4eItQsmgl4L-0zI2wGP8T06M1uKK9J4apfJA8Ri6u0P-1edDPQ0hjl8io2mF-mFGiNwJOkrH8sxCNYSClydY-JxWmuOwkk3TNWCuKBoZtw6j6O-mS9kJfwbx38yEu4Q4xwnoGwWkYjdS3-pm12G-1AHhCnE" 
+                    alt="NestHaven visual background" 
+                    src="/auth_bg.png" 
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
                 </div>
@@ -311,7 +456,6 @@ export const AuthScreen: React.FC = () => {
                   <img src="/logo.png" alt="PG Connect Logo" className="size-6 rounded-md object-cover shadow-xs" />
                   <span className="font-extrabold text-base tracking-tight text-slate-900 dark:text-white">PG Connect</span>
                 </div>
-
                 <div className="mb-6">
                   <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Join the Community</h2>
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-0.5">Create your resident account to get started.</p>
@@ -326,121 +470,495 @@ export const AuthScreen: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Full Name */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="fullName">Full Name</label>
-                    <div className="relative flex items-center">
-                      <User className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
-                      <input 
-                        className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
-                        id="fullName" 
-                        placeholder="Jane Doe" 
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        required
-                        disabled={isLoading}
+                  {/* Visual Step Indicator */}
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between relative max-w-md mx-auto">
+                      <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-slate-200 dark:bg-slate-800 -z-10" />
+                      <div 
+                        className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-blue-500 transition-all duration-300 -z-10" 
+                        style={{ width: `${((step - 1) / 3) * 100}%` }}
                       />
+                      
+                      {[1, 2, 3, 4].map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => {
+                            if (s < step) {
+                              setStep(s);
+                            } else if (s > step) {
+                              let valid = true;
+                              for (let i = step; i < s; i++) {
+                                if (!validateStep(i)) {
+                                  valid = false;
+                                  break;
+                                }
+                              }
+                              if (valid) setStep(s);
+                            }
+                          }}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border transition-all ${
+                            step === s
+                              ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20'
+                              : step > s
+                              ? 'bg-emerald-500 border-emerald-500 text-white'
+                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500'
+                          }`}
+                        >
+                          {step > s ? <Check className="size-3.5" /> : s}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex justify-between max-w-md mx-auto text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mt-2 px-1">
+                      <span className={step === 1 ? "text-blue-600 dark:text-blue-400" : ""}>Account</span>
+                      <span className={step === 2 ? "text-blue-600 dark:text-blue-400" : ""}>Personal</span>
+                      <span className={step === 3 ? "text-blue-600 dark:text-blue-400" : ""}>Stay & ID</span>
+                      <span className={step === 4 ? "text-blue-600 dark:text-blue-400" : ""}>Details</span>
                     </div>
                   </div>
 
-                  {/* Email & Phone Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="reg-email">Email</label>
-                      <div className="relative flex items-center">
-                        <Mail className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
-                        <input 
-                          className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
-                          id="reg-email" 
-                          placeholder="jane@example.com" 
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          required
-                          disabled={isLoading}
-                        />
+                  {/* Step 1: Account Credentials */}
+                  {step === 1 && (
+                    <div className="space-y-4 animate-in fade-in duration-200">
+                      {/* Invite Token */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="inviteToken">Invite Token</label>
+                        <div className="relative flex items-center">
+                          <Building2 className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
+                          <input 
+                            className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
+                            id="inviteToken" 
+                            placeholder="e.g. INV-XXXXXX" 
+                            type="text"
+                            value={building}
+                            onChange={(e) => setBuilding(e.target.value.toUpperCase())}
+                            required
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Email */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="reg-email">Email Address</label>
+                        <div className="relative flex items-center">
+                          <Mail className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
+                          <input 
+                            className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
+                            id="reg-email" 
+                            placeholder="jane@example.com" 
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Phone Number */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="phone">Phone Number</label>
+                        <div className="relative flex items-center">
+                          <Phone className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
+                          <input 
+                            className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
+                            id="phone" 
+                            placeholder="9876543210" 
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            required
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Create Password */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="reg-password">Create Password</label>
+                        <div className="relative flex items-center">
+                          <Lock className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
+                          <input 
+                            className="w-full h-10 pl-10 pr-11 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
+                            id="reg-password" 
+                            placeholder="••••••••" 
+                            type={showPassword ? "text" : "password"}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            disabled={isLoading}
+                          />
+                          <button 
+                            className="absolute right-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" 
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            disabled={isLoading}
+                          >
+                            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal mt-1">At least 8 characters with a symbol & number.</p>
                       </div>
                     </div>
-                    
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="phone">Phone Number</label>
-                      <div className="relative flex items-center">
-                        <Phone className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
-                        <input 
-                          className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
-                          id="phone" 
-                          placeholder="+1 (555) 000-0000" 
-                          type="tel"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          required
-                          disabled={isLoading}
-                        />
+                  )}
+
+                  {/* Step 2: Personal Details */}
+                  {step === 2 && (
+                    <div className="space-y-4 animate-in fade-in duration-200">
+                      {/* Full Name */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="fullName">Full Name</label>
+                        <div className="relative flex items-center">
+                          <User className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
+                          <input 
+                            className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
+                            id="fullName" 
+                            placeholder="Jane Doe" 
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            required
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
+
+                      {/* DOB, Age, Blood Group grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="dob">Date of Birth</label>
+                          <div className="relative flex items-center">
+                            <Calendar className="size-4 absolute left-3 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                            <input 
+                              className="w-full h-10 pl-10 pr-2 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all cursor-pointer"
+                              id="dob" 
+                              type="date"
+                              value={dob}
+                              onChange={(e) => setDob(e.target.value)}
+                              required
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="age">Age</label>
+                          <div className="relative flex items-center">
+                            <Hash className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
+                            <input 
+                              className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
+                              id="age" 
+                              placeholder="24" 
+                              type="number"
+                              value={age}
+                              onChange={(e) => setAge(e.target.value)}
+                              required
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="bloodGroup">Blood Group</label>
+                          <div className="relative flex items-center">
+                            <Users className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
+                            <input 
+                              className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
+                              id="bloodGroup" 
+                              placeholder="O+ve" 
+                              type="text"
+                              value={bloodGroup}
+                              onChange={(e) => setBloodGroup(e.target.value)}
+                              required
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Father Name & Contact No */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="fatherName">Father&apos;s Name</label>
+                          <div className="relative flex items-center">
+                            <User className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
+                            <input 
+                              className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
+                              id="fatherName" 
+                              placeholder="Father's Full Name" 
+                              type="text"
+                              value={fatherName}
+                              onChange={(e) => setFatherName(e.target.value)}
+                              required
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="fatherPhone">Father&apos;s Contact No</label>
+                          <div className="relative flex items-center">
+                            <Phone className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
+                            <input 
+                              className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
+                              id="fatherPhone" 
+                              placeholder="Father's Contact No" 
+                              type="tel"
+                              value={fatherPhone}
+                              onChange={(e) => setFatherPhone(e.target.value)}
+                              required
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="inviteToken">Invite Token</label>
-                    <div className="relative flex items-center">
-                      <Building2 className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
-                      <input 
-                        className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
-                        id="inviteToken" 
-                        placeholder="e.g. INV-XXXXXX" 
-                        type="text"
-                        value={building}
-                        onChange={(e) => setBuilding(e.target.value.toUpperCase())}
-                        required
-                        disabled={isLoading}
-                      />
+                  {/* Step 3: Identity & Stay */}
+                  {step === 3 && (
+                    <div className="space-y-4 animate-in fade-in duration-200">
+                      {/* ID Proof Type & Number */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="idProofType">ID Proof Type</label>
+                          <div className="relative flex items-center">
+                            <ShieldCheck className="size-4 absolute left-3 text-slate-400 dark:text-slate-500 pointer-events-none" />
+                            <select 
+                              className="w-full h-10 pl-10 pr-10 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
+                              id="idProofType"
+                              value={idProofType}
+                              onChange={(e) => setIdProofType(e.target.value)}
+                              required
+                              disabled={isLoading}
+                            >
+                              <option value="Aadhaar">Aadhaar Card</option>
+                              <option value="PAN Card">PAN Card</option>
+                              <option value="Driving License">Driving License</option>
+                              <option value="Passport">Passport</option>
+                              <option value="Voter ID">Voter ID</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="idNumber">Aadhaar No / ID No</label>
+                          <div className="relative flex items-center">
+                            <Hash className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
+                            <input 
+                              className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
+                              id="idNumber" 
+                              placeholder="1234-5678-9012" 
+                              type="text"
+                              value={idNumber}
+                              onChange={(e) => setIdNumber(e.target.value)}
+                              required
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Expected period of Stay */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="expectedStay">Expected Period of Stay</label>
+                        <div className="relative flex items-center">
+                          <Calendar className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
+                          <input 
+                            className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
+                            id="expectedStay" 
+                            placeholder="e.g. 6 Months, 1 Year" 
+                            type="text"
+                            value={expectedStay}
+                            onChange={(e) => setExpectedStay(e.target.value)}
+                            required
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Occupation */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="occupation">Occupation</label>
+                        <div className="relative flex items-center">
+                          <Briefcase className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
+                          <input 
+                            className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
+                            id="occupation" 
+                            placeholder="e.g. Software Engineer, Student" 
+                            type="text"
+                            value={occupation}
+                            onChange={(e) => setOccupation(e.target.value)}
+                            required
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Password with Toggle */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="reg-password">Create Password</label>
-                    <div className="relative flex items-center">
-                      <Lock className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
-                      <input 
-                        className="w-full h-10 pl-10 pr-11 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
-                        id="reg-password" 
-                        placeholder="••••••••" 
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                        disabled={isLoading}
-                      />
-                      <button 
-                        className="absolute right-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" 
+                  {/* Step 4: Addresses, Office details & References */}
+                  {step === 4 && (
+                    <div className="space-y-4 max-h-[320px] overflow-y-auto pr-1 animate-in fade-in duration-200">
+                      {/* Address Fields */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="permanentAddress">Permanent Address</label>
+                          <div className="relative flex items-start">
+                            <Home className="size-4 absolute left-3 top-3 text-slate-400 dark:text-slate-500" />
+                            <textarea 
+                              className="w-full min-h-[70px] pl-10 pr-4 py-2 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400 resize-none"
+                              id="permanentAddress" 
+                              placeholder="Permanent Address" 
+                              value={permanentAddress}
+                              onChange={(e) => setPermanentAddress(e.target.value)}
+                              required
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="previousAddress">Previous Address</label>
+                          <div className="relative flex items-start">
+                            <Home className="size-4 absolute left-3 top-3 text-slate-400 dark:text-slate-500" />
+                            <textarea 
+                              className="w-full min-h-[70px] pl-10 pr-4 py-2 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400 resize-none"
+                              id="previousAddress" 
+                              placeholder="Previous Address" 
+                              value={previousAddress}
+                              onChange={(e) => setPreviousAddress(e.target.value)}
+                              required
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Office / College Details */}
+                      <div className="border border-slate-100 dark:border-slate-800/80 p-3 rounded-xl bg-slate-50/30 dark:bg-slate-950/10 space-y-3">
+                        <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Office / College Details (Optional)</h4>
+                        
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400" htmlFor="officeName">Institution Name</label>
+                          <input 
+                            className="w-full h-8 px-3 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-lg font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                            id="officeName" 
+                            placeholder="e.g. Acme Corp, Christ College" 
+                            type="text"
+                            value={officeName}
+                            onChange={(e) => setOfficeName(e.target.value)}
+                            disabled={isLoading}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400" htmlFor="officeAddress">Institution Address</label>
+                            <input 
+                              className="w-full h-8 px-3 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-lg font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                              id="officeAddress" 
+                              placeholder="Address details" 
+                              type="text"
+                              value={officeAddress}
+                              onChange={(e) => setOfficeAddress(e.target.value)}
+                              disabled={isLoading}
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400" htmlFor="officePhone">Institution Phone</label>
+                            <input 
+                              className="w-full h-8 px-3 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-lg font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all"
+                              id="officePhone" 
+                              placeholder="Phone number" 
+                              type="tel"
+                              value={officePhone}
+                              onChange={(e) => setOfficePhone(e.target.value)}
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* References details */}
+                      <div className="border border-slate-100 dark:border-slate-800/80 p-3 rounded-xl bg-slate-50/30 dark:bg-slate-950/10 space-y-3">
+                        <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">References (Required)</h4>
+                        
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400" htmlFor="reference1">Reference (1) - Name, Address & Phone</label>
+                          <textarea 
+                            className="w-full min-h-[50px] px-3 py-1.5 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-lg font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none"
+                            id="reference1" 
+                            placeholder="Reference 1 Name, Address & Phone" 
+                            value={reference1}
+                            onChange={(e) => setReference1(e.target.value)}
+                            required
+                            disabled={isLoading}
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400" htmlFor="reference2">Reference (2) - Name, Address & Phone</label>
+                          <textarea 
+                            className="w-full min-h-[50px] px-3 py-1.5 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-lg font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none"
+                            id="reference2" 
+                            placeholder="Reference 2 Name, Address & Phone" 
+                            value={reference2}
+                            onChange={(e) => setReference2(e.target.value)}
+                            required
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Navigation / Action Buttons */}
+                  <div className="flex gap-3 pt-2">
+                    {step > 1 && (
+                      <button
                         type="button"
-                        onClick={() => setShowPassword(!showPassword)}
+                        onClick={() => setStep(step - 1)}
+                        className="flex-1 h-10 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 font-bold rounded-xl active:scale-[0.98] flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer text-xs"
                         disabled={isLoading}
                       >
-                        {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                        <ArrowLeft className="size-4" />
+                        Back
                       </button>
-                    </div>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-normal mt-1">At least 8 characters with a symbol & number.</p>
-                  </div>
-
-                  {/* Submit Button */}
-                  <div className="pt-2">
-                    <button 
-                      className="w-full h-10 bg-[#003d9b] hover:bg-[#0052cc] text-white dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-slate-950 font-bold rounded-xl shadow-md active:scale-[0.98] flex items-center justify-center gap-1.5 transition-all border border-transparent disabled:opacity-50 cursor-pointer" 
-                      type="submit"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? (
-                        <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <>
-                          Register
-                          <ArrowRight className="size-4" />
-                        </>
-                      )}
-                    </button>
+                    )}
+                    
+                    {step < 4 ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (validateStep(step)) {
+                            setStep(step + 1);
+                          }
+                        }}
+                        className="flex-1 h-10 bg-[#003d9b] hover:bg-[#0052cc] text-white dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-slate-950 font-bold rounded-xl shadow-md active:scale-[0.98] flex items-center justify-center gap-1.5 transition-all border border-transparent disabled:opacity-50 cursor-pointer text-xs"
+                        disabled={isLoading}
+                      >
+                        Next
+                        <ArrowRight className="size-4" />
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        className="flex-1 h-10 bg-[#003d9b] hover:bg-[#0052cc] text-white dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-slate-950 font-bold rounded-xl shadow-md active:scale-[0.98] flex items-center justify-center gap-1.5 transition-all border border-transparent disabled:opacity-50 cursor-pointer text-xs"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            Register
+                            <ArrowRight className="size-4" />
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
 
                   {/* Toggle Mode */}

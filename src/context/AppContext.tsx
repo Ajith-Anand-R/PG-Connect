@@ -175,7 +175,7 @@ interface AppContextType {
   userRole: 'Owner' | 'Tenant' | null;
   login: (emailOrPhone: string, password?: string) => Promise<{ error: string | null }>;
   logout: () => void;
-  register: (name: string, email: string, phone: string, password?: string, role?: string, pgId?: string) => Promise<{ error: string | null }>;
+  register: (name: string, email: string, phone: string, password?: string, role?: string, pgId?: string, additionalDetails?: Record<string, any>) => Promise<{ error: string | null }>;
   
   // Owner States & Actions
   allTenants: OwnerTenant[];
@@ -521,23 +521,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let sub: ReturnType<typeof supabase.channel> | null = null;
 
     const setupAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setIsLoggedIn(true);
-        setUserId(session.user.id);
-        fetchData(session.user.id, session.user.email || '');
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.warn("Supabase session recovery error, clearing local session:", error.message);
+          if (typeof window !== 'undefined') {
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i);
+              if (key && key.startsWith('sb-')) {
+                keysToRemove.push(key);
+              }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+          }
+          await supabase.auth.signOut();
+        }
 
-        // Setup real-time subscription for instant syncing
-        sub = supabase
-          .channel('schema-db-changes')
-          .on('postgres_changes', { event: '*', schema: 'public' }, () => {
-            fetchData(session.user.id, session.user.email || '');
-          })
-          .subscribe();
-      } else {
-        setIsLoggedIn(false);
-        setUserId(null);
-        setUserRole(null);
+        if (session?.user) {
+          setIsLoggedIn(true);
+          setUserId(session.user.id);
+          fetchData(session.user.id, session.user.email || '');
+
+          // Setup real-time subscription for instant syncing
+          sub = supabase
+            .channel('schema-db-changes')
+            .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+              fetchData(session.user.id, session.user.email || '');
+            })
+            .subscribe();
+        } else {
+          setIsLoggedIn(false);
+          setUserId(null);
+          setUserRole(null);
+        }
+      } catch (err) {
+        console.error("Error setting up auth:", err);
       }
 
       // Listen to auth changes
@@ -593,7 +612,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Register
-  const register = async (name: string, email: string, phone: string, password?: string, role?: string, pgIdOrToken?: string) => {
+  const register = async (
+    name: string, 
+    email: string, 
+    phone: string, 
+    password?: string, 
+    role?: string, 
+    pgIdOrToken?: string,
+    additionalDetails?: Record<string, any>
+  ) => {
     try {
       const selectedRole = role || 'Tenant';
       const isTenant = selectedRole === 'Tenant';
@@ -606,7 +633,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             phone,
             role: selectedRole,
             invite_token: isTenant ? pgIdOrToken : null,
-            pg_id: !isTenant && pgIdOrToken ? Number(pgIdOrToken) : null
+            pg_id: !isTenant && pgIdOrToken ? Number(pgIdOrToken) : null,
+            ...additionalDetails
           }
         }
       });
