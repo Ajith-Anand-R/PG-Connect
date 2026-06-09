@@ -1048,9 +1048,37 @@ export const AuthScreen: React.FC = () => {
                     {step < 5 ? (
                       <button
                         type="button"
-                        onClick={() => {
-                          if (validateStep(step)) {
-                            setStep(step + 1);
+                        onClick={async () => {
+                          if (step === 1) {
+                            setError(null);
+                            if (!validateStep(1)) return;
+                            
+                            setIsLoading(true);
+                            try {
+                              const { data, error: dbErr } = await supabase
+                                .from('tenants')
+                                .select('id')
+                                .eq('invite_token', building)
+                                .or('invite_expires_at.is.null,invite_expires_at.gt.' + new Date().toISOString())
+                                .is('user_id', null)
+                                .maybeSingle();
+
+                              if (dbErr || !data) {
+                                setError("Invalid, expired, or already registered invite token.");
+                                setIsLoading(false);
+                                return;
+                              }
+                            } catch (err) {
+                              setError("Error validating invite token. Please try again.");
+                              setIsLoading(false);
+                              return;
+                            }
+                            setIsLoading(false);
+                            setStep(2);
+                          } else {
+                            if (validateStep(step)) {
+                              setStep(step + 1);
+                            }
                           }
                         }}
                         className="flex-1 h-10 bg-[#003d9b] hover:bg-[#0052cc] text-white dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-slate-950 font-bold rounded-xl shadow-md active:scale-[0.98] flex items-center justify-center gap-1.5 transition-all border border-transparent disabled:opacity-50 cursor-pointer text-xs"
