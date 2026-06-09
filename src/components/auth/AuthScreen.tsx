@@ -12,8 +12,7 @@ import {
   User, 
   ArrowRight, 
   ShieldCheck,
-  Building2,
-  ChevronDown
+  Building2
 } from 'lucide-react';
 
 
@@ -32,18 +31,6 @@ export const AuthScreen: React.FC = () => {
   const [building, setBuilding] = useState('');
   const [password, setPassword] = useState('');
   const [rememberDevice, setRememberDevice] = useState(false);
-  
-  const [pgsList, setPgsList] = useState<{ id: string; name: string }[]>([]);
-
-  useEffect(() => {
-    const fetchPGs = async () => {
-      const { data } = await supabase.from('pgs').select('id, name');
-      if (data) {
-        setPgsList(data.map(p => ({ id: p.id.toString(), name: p.name })));
-      }
-    };
-    fetchPGs();
-  }, []);
   
   // UI states
   const [error, setError] = useState<string | null>(null);
@@ -394,78 +381,22 @@ export const AuthScreen: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Role Selection */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300 block">Register As</label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setRole('Tenant')}
-                        className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-xs font-bold cursor-pointer ${
-                          role === 'Tenant'
-                            ? 'border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                            : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 text-slate-500'
-                        }`}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="inviteToken">Invite Token</label>
+                    <div className="relative flex items-center">
+                      <Building2 className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
+                      <input 
+                        className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
+                        id="inviteToken" 
+                        placeholder="e.g. INV-XXXXXX" 
+                        type="text"
+                        value={building}
+                        onChange={(e) => setBuilding(e.target.value.toUpperCase())}
+                        required
                         disabled={isLoading}
-                      >
-                        <User className="size-4" />
-                        Tenant / Resident
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setRole('Owner')}
-                        className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-xs font-bold cursor-pointer ${
-                          role === 'Owner'
-                            ? 'border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                            : 'border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/50 text-slate-500'
-                        }`}
-                        disabled={isLoading}
-                      >
-                        <Building2 className="size-4" />
-                        PG Owner / Landlord
-                      </button>
+                      />
                     </div>
                   </div>
-
-                  {role === 'Tenant' ? (
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="inviteToken">Invite Token</label>
-                      <div className="relative flex items-center">
-                        <Building2 className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
-                        <input 
-                          className="w-full h-10 pl-10 pr-4 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400"
-                          id="inviteToken" 
-                          placeholder="e.g. INV-XXXXXX" 
-                          type="text"
-                          value={building}
-                          onChange={(e) => setBuilding(e.target.value.toUpperCase())}
-                          required
-                          disabled={isLoading}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="building">Building / PG Location</label>
-                      <div className="relative flex items-center">
-                        <Building2 className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
-                        <select 
-                          id="building" 
-                          value={building}
-                          onChange={(e) => setBuilding(e.target.value)}
-                          required
-                          disabled={isLoading}
-                          className="w-full h-10 pl-10 pr-10 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all appearance-none cursor-pointer"
-                        >
-                          <option value="" disabled>Select your PG Location</option>
-                          {pgsList.map(pg => (
-                            <option key={pg.id} value={pg.id}>{pg.name}</option>
-                          ))}
-                        </select>
-                        <ChevronDown className="size-4 absolute right-3.5 text-slate-400 dark:text-slate-500 pointer-events-none" />
-                      </div>
-                    </div>
-                  )}
 
                   {/* Password with Toggle */}
                   <div className="space-y-1">
