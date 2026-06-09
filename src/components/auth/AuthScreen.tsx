@@ -34,7 +34,7 @@ export const AuthScreen: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [role, setRole] = useState<'Tenant' | 'Owner'>('Tenant');
+  const role = 'Tenant';
   const [building, setBuilding] = useState('');
   const [password, setPassword] = useState('');
   const [rememberDevice, setRememberDevice] = useState(false);
@@ -75,7 +75,6 @@ export const AuthScreen: React.FC = () => {
     setPhone('');
     setBuilding('');
     setPassword('');
-    setRole('Tenant');
     setDob('');
     setAge('');
     setBloodGroup('');

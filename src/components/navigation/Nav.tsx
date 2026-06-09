@@ -29,11 +29,11 @@ import {
 export const Nav: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
-  const { tenant, notifications, logout, userRole } = useApp();
+  const { tenant, notifications, logout } = useApp();
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const tenantItems = [
+  const navItems = [
     { label: 'Home', href: '/', icon: LayoutDashboard },
     { label: 'Payments', href: '/payments', icon: CreditCard },
     { label: 'Services', href: '/services', icon: Wrench },
@@ -41,16 +41,6 @@ export const Nav: React.FC = () => {
     { label: 'Community', href: '/community', icon: Users },
     { label: 'Profile', href: '/profile', icon: User },
   ];
-
-  const ownerItems = [
-    { label: 'Dashboard', href: '/', icon: LayoutDashboard },
-    { label: 'Payments', href: '/payments', icon: CreditCard },
-    { label: 'Tickets', href: '/services', icon: Wrench },
-    { label: 'Notices', href: '/notices', icon: Megaphone },
-    { label: 'Meals', href: '/meals', icon: Coffee },
-  ];
-
-  const navItems = userRole === 'Owner' ? ownerItems : tenantItems;
 
   return (
     <>

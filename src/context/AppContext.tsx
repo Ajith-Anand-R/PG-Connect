@@ -95,83 +95,6 @@ export interface AppNotification {
   read: boolean;
 }
 
-export interface OwnerTenant {
-  id: string | number;
-  status: string;
-  join_date?: string;
-  deposit?: string | number;
-  pg_id?: string | number;
-  user_id?: string;
-  dob?: string;
-  age?: number;
-  blood_group?: string;
-  father_name?: string;
-  father_phone?: string;
-  id_proof_type?: string;
-  aadhaar_number?: string;
-  expected_stay?: string;
-  occupation?: string;
-  permanent_address?: string;
-  previous_address?: string;
-  office_name?: string;
-  office_address?: string;
-  office_phone?: string;
-  reference_1?: string;
-  reference_2?: string;
-  photo_url?: string;
-  id_proof_url?: string;
-  name?: string;
-  email?: string;
-  phone?: string;
-  users: {
-    name: string;
-    phone?: string;
-    meal_dietary?: 'Veg' | 'Non-Veg' | 'Egg';
-    meal_breakfast?: boolean;
-    meal_lunch?: boolean;
-    meal_dinner?: boolean;
-  } | null;
-  rooms: {
-    room_number: string;
-  } | null;
-  beds?: {
-    bed_number: string;
-  } | null;
-}
-
-export interface OwnerPayment {
-  id: string | number;
-  amount: string;
-  month: string;
-  status: string;
-  payment_method: string | null;
-  payment_date?: string | null;
-  tenants: {
-    users: {
-      name: string;
-    } | null;
-    rooms: {
-      room_number: string;
-    } | null;
-  } | null;
-}
-
-export interface OwnerComplaint {
-  id: string | number;
-  title: string;
-  description: string | null;
-  status: string;
-  created_at: string;
-  tenants: {
-    users: {
-      name: string;
-    } | null;
-    rooms: {
-      room_number: string;
-    } | null;
-  } | null;
-}
-
 interface AppContextType {
   tenant: TenantInfo;
   bills: Bill[];
@@ -195,24 +118,10 @@ interface AppContextType {
   updateMeals: (breakfast: boolean, lunch: boolean, dinner: boolean) => void;
   updateDietary: (dietary: 'Veg' | 'Non-Veg' | 'Egg') => void;
   isLoggedIn: boolean;
-  userRole: 'Owner' | 'Tenant' | null;
+  userRole: 'Tenant' | null;
   login: (emailOrPhone: string, password?: string) => Promise<{ error: string | null }>;
   logout: () => void;
   register: (name: string, email: string, phone: string, password?: string, role?: string, pgId?: string, additionalDetails?: Record<string, any>) => Promise<{ error: string | null }>;
-  
-  // Owner States & Actions
-  allTenants: OwnerTenant[];
-  allComplaints: OwnerComplaint[];
-  allPayments: OwnerPayment[];
-  allMeals: {
-    breakfastCount: number;
-    lunchCount: number;
-    dinnerCount: number;
-    dietaryCounts: { Veg: number; 'Non-Veg': number; Egg: number };
-  };
-  updateComplaintStatus: (id: string, status: 'pending' | 'in-progress' | 'resolved') => void;
-  addNotice: (title: string, message: string) => void;
-  markPaymentAsPaid: (id: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -221,7 +130,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   console.log("AppProvider render called, window:", typeof window !== 'undefined');
   // Authentication State
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const [userRole, setUserRole] = useState<'Owner' | 'Tenant' | null>(null);
+  const [userRole, setUserRole] = useState<'Tenant' | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [pgId, setPgId] = useState<number | null>(null);
 
@@ -258,22 +167,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     dietary: 'Veg'
   });
 
-  // Owner Specific States
-  const [allTenants, setAllTenants] = useState<OwnerTenant[]>([]);
-  const [allComplaints, setAllComplaints] = useState<OwnerComplaint[]>([]);
-  const [allPayments, setAllPayments] = useState<OwnerPayment[]>([]);
-  const [allMeals, setAllMeals] = useState<{
-    breakfastCount: number;
-    lunchCount: number;
-    dinnerCount: number;
-    dietaryCounts: { Veg: number; 'Non-Veg': number; Egg: number };
-  }>({
-    breakfastCount: 0,
-    lunchCount: 0,
-    dinnerCount: 0,
-    dietaryCounts: { Veg: 0, 'Non-Veg': 0, Egg: 0 }
-  });
-
   // Chat Local Mock State
   const [chats, setChats] = useState<ChatThread[]>([]);
 
@@ -292,8 +185,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return;
       }
 
-      const role = userProfile.role as 'Owner' | 'Tenant';
-      setUserRole(role);
+      const role = userProfile.role;
+      if (role !== 'Tenant') {
+        console.warn('Access denied: Owner role not allowed in PG Connect.');
+        await supabase.auth.signOut();
+        setIsLoggedIn(false);
+        setUserId(null);
+        setUserRole(null);
+        return;
+      }
+      setUserRole('Tenant');
 
 
       if (userProfile.pg_id) {
@@ -485,54 +386,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             })));
           }
         }
-      } else if (role === 'Owner') {
-        // Fetch Owner specific data
-        
-        // 1. Fetch Tenants list
-        const { data: dbTenants } = await supabase
-          .from('tenants')
-          .select('*, users(*), rooms(*), beds(*)');
-        if (dbTenants) setAllTenants(dbTenants);
-
-        // 2. Fetch Payments list
-        const { data: dbPayments } = await supabase
-          .from('payments')
-          .select('*, tenants(*, users(*), rooms(*))')
-          .order('id', { ascending: false });
-        if (dbPayments) setAllPayments(dbPayments);
-
-        // 3. Fetch Complaints list
-        const { data: dbComplaints } = await supabase
-          .from('complaints')
-          .select('*, tenants(*, users(*), rooms(*))')
-          .order('id', { ascending: false });
-        if (dbComplaints) setAllComplaints(dbComplaints);
-
-        // 4. Aggregate Meals
-        const { data: dbUsersMeals } = await supabase
-          .from('users')
-          .select('meal_breakfast, meal_lunch, meal_dinner, meal_dietary')
-          .eq('role', 'Tenant')
-          .eq('pg_id', userProfile.pg_id);
-
-        if (dbUsersMeals) {
-          let bCount = 0, lCount = 0, dCount = 0;
-          const diet = { Veg: 0, 'Non-Veg': 0, Egg: 0 };
-          dbUsersMeals.forEach(u => {
-            if (u.meal_breakfast) bCount++;
-            if (u.meal_lunch) lCount++;
-            if (u.meal_dinner) dCount++;
-            if (u.meal_dietary === 'Veg') diet.Veg++;
-            else if (u.meal_dietary === 'Non-Veg') diet['Non-Veg']++;
-            else if (u.meal_dietary === 'Egg') diet.Egg++;
-          });
-          setAllMeals({
-            breakfastCount: bCount,
-            lunchCount: lCount,
-            dinnerCount: dCount,
-            dietaryCounts: diet
-          });
-        }
       }
     } catch (err) {
       console.error('Error synchronizing data:', err);
@@ -634,13 +487,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     email: string, 
     phone: string, 
     password?: string, 
-    role?: string, 
+    _role?: string, 
     pgIdOrToken?: string,
     additionalDetails?: Record<string, any>
   ) => {
     try {
-      const selectedRole = role || 'Tenant';
-      const isTenant = selectedRole === 'Tenant';
       const { error } = await supabase.auth.signUp({
         email,
         password: password || 'password123',
@@ -648,9 +499,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           data: {
             name,
             phone,
-            role: selectedRole,
-            invite_token: isTenant ? pgIdOrToken : null,
-            pg_id: !isTenant && pgIdOrToken ? Number(pgIdOrToken) : null,
+            role: 'Tenant',
+            invite_token: pgIdOrToken,
             ...additionalDetails
           }
         }
@@ -846,56 +696,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Owner Action: Update Complaint status
-  const updateComplaintStatus = async (id: string, status: 'pending' | 'in-progress' | 'resolved') => {
-    try {
-      const { error } = await supabase
-        .from('complaints')
-        .update({ status })
-        .eq('id', parseInt(id));
-
-      if (error) throw error;
-    } catch (err) {
-      console.error('Error updating complaint status:', err);
-    }
-  };
-
-  // Owner Action: Add Notice
-  const addNotice = async (title: string, message: string) => {
-    if (!pgId) return;
-    try {
-      const { error } = await supabase
-        .from('notices')
-        .insert({
-          pg_id: pgId,
-          title,
-          message
-        });
-
-      if (error) throw error;
-    } catch (err) {
-      console.error('Error adding notice:', err);
-    }
-  };
-
-  // Owner Action: Mark payment as paid
-  const markPaymentAsPaid = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('payments')
-        .update({
-          status: 'paid',
-          payment_date: new Date().toISOString().split('T')[0],
-          payment_method: 'Cash/Offline'
-        })
-        .eq('id', parseInt(id));
-
-      if (error) throw error;
-    } catch (err) {
-      console.error('Error marking payment as paid:', err);
-    }
-  };
-
   return (
     <AppContext.Provider value={{
       tenant,
@@ -918,16 +718,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       userRole,
       login,
       logout,
-      register,
-      
-      // Owner states and actions
-      allTenants,
-      allComplaints,
-      allPayments,
-      allMeals,
-      updateComplaintStatus,
-      addNotice,
-      markPaymentAsPaid
+      register
     }}>
       {children}
     </AppContext.Provider>
