@@ -544,12 +544,6 @@ export const AuthScreen: React.FC = () => {
       {/* Persistent Footer copyright */}
       <div className="w-full text-center text-[10px] font-bold text-slate-400 dark:text-slate-500 flex flex-col gap-1 mt-6 z-10">
         <p>© 2026 PG Connect. All Rights Reserved.</p>
-        <p className="flex items-center justify-center gap-1.5">
-          Powered by
-          <span className="font-extrabold tracking-wider border border-slate-200 dark:border-slate-800 py-0.5 px-2 rounded bg-white dark:bg-[#131c2e] text-slate-500 dark:text-slate-400 shadow-2xs">
-            KALLQUE
-          </span>
-        </p>
       </div>
     </div>
   );
