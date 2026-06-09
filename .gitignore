@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# agents and skills
+/.agents/
+
+# graphify
+/graphify-out/
+/output.html
+
+# markdown
+*.md
