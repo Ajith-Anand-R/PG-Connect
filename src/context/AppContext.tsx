@@ -100,6 +100,29 @@ export interface OwnerTenant {
   status: string;
   join_date?: string;
   deposit?: string | number;
+  pg_id?: string | number;
+  user_id?: string;
+  dob?: string;
+  age?: number;
+  blood_group?: string;
+  father_name?: string;
+  father_phone?: string;
+  id_proof_type?: string;
+  aadhaar_number?: string;
+  expected_stay?: string;
+  occupation?: string;
+  permanent_address?: string;
+  previous_address?: string;
+  office_name?: string;
+  office_address?: string;
+  office_phone?: string;
+  reference_1?: string;
+  reference_2?: string;
+  photo_url?: string;
+  id_proof_url?: string;
+  name?: string;
+  email?: string;
+  phone?: string;
   users: {
     name: string;
     phone?: string;
@@ -519,23 +542,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Monitor Supabase Auth state changes
   useEffect(() => {
     let sub: ReturnType<typeof supabase.channel> | null = null;
+    let subscription: any = null;
 
     const setupAuth = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
-          console.warn("Supabase session recovery error, clearing local session:", error.message);
-          if (typeof window !== 'undefined') {
-            const keysToRemove = [];
-            for (let i = 0; i < localStorage.length; i++) {
-              const key = localStorage.key(i);
-              if (key && key.startsWith('sb-')) {
-                keysToRemove.push(key);
-              }
-            }
-            keysToRemove.forEach(k => localStorage.removeItem(k));
-          }
-          await supabase.auth.signOut();
+          console.warn("Supabase session recovery warning:", error.message);
         }
 
         if (session?.user) {
@@ -556,16 +569,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setUserRole(null);
         }
       } catch (err) {
-        console.error("Error setting up auth:", err);
+        console.error("Error setting up auth session:", err);
       }
 
       // Listen to auth changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+        console.log("Supabase Auth State Event:", event);
         if (session?.user) {
           setIsLoggedIn(true);
           setUserId(session.user.id);
           fetchData(session.user.id, session.user.email || '');
-        } else {
+        } else if (event === 'SIGNED_OUT') {
           setIsLoggedIn(false);
           setUserId(null);
           setUserRole(null);
@@ -574,16 +588,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
       });
-
-      return () => {
-        subscription.unsubscribe();
-        if (sub) {
-          supabase.removeChannel(sub);
-        }
-      };
+      subscription = data.subscription;
     };
 
     setupAuth();
+
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+      if (sub) {
+        supabase.removeChannel(sub);
+      }
+    };
   }, [fetchData]);
 
   // Sign-in

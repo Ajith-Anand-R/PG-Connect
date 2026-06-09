@@ -59,6 +59,8 @@ export const AuthScreen: React.FC = () => {
 
   // Wizard state
   const [step, setStep] = useState(1);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [idProofFile, setIdProofFile] = useState<File | null>(null);
   
   // UI states
   const [error, setError] = useState<string | null>(null);
@@ -90,6 +92,8 @@ export const AuthScreen: React.FC = () => {
     setOfficePhone('');
     setReference1('');
     setReference2('');
+    setPhotoFile(null);
+    setIdProofFile(null);
     setStep(1);
   };
 
@@ -171,9 +175,19 @@ export const AuthScreen: React.FC = () => {
         setError("Reference (2) Name, Address & Phone is required.");
         return false;
       }
+    } else if (currentStep === 5) {
+      if (!photoFile) {
+        setError("Passport Size Photo is required.");
+        return false;
+      }
+      if (!idProofFile) {
+        setError("Aadhaar/ID Proof Document is required.");
+        return false;
+      }
     }
     return true;
   };
+
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,8 +210,8 @@ export const AuthScreen: React.FC = () => {
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate all steps from 1 to 4
-    for (let i = 1; i <= 4; i++) {
+    // Validate all steps from 1 to 5
+    for (let i = 1; i <= 5; i++) {
       if (!validateStep(i)) {
         setStep(i);
         return;
@@ -207,29 +221,73 @@ export const AuthScreen: React.FC = () => {
     setIsLoading(true);
     setError(null);
     
-    const additionalDetails = {
-      dob,
-      age: parseInt(age) || null,
-      blood_group: bloodGroup,
-      father_name: fatherName,
-      father_phone: fatherPhone,
-      id_proof_type: idProofType,
-      aadhaar_number: idNumber,
-      expected_stay: expectedStay,
-      occupation,
-      permanent_address: permanentAddress,
-      previous_address: previousAddress,
-      office_name: officeName,
-      office_address: officeAddress,
-      office_phone: officePhone,
-      reference_1: reference1,
-      reference_2: reference2
-    };
+    try {
+      let photo_url = '';
+      let id_proof_url = '';
+      
+      // Upload Photo if selected
+      if (photoFile) {
+        const fileExt = photoFile.name.split('.').pop();
+        const fileName = `photo_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const { data, error: uploadErr } = await supabase.storage
+          .from('tenant-documents')
+          .upload(`photos/${fileName}`, photoFile);
+          
+        if (uploadErr) throw uploadErr;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('tenant-documents')
+          .getPublicUrl(`photos/${fileName}`);
+          
+        photo_url = publicUrl;
+      }
+      
+      // Upload ID Proof if selected
+      if (idProofFile) {
+        const fileExt = idProofFile.name.split('.').pop();
+        const fileName = `id_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const { data, error: uploadErr } = await supabase.storage
+          .from('tenant-documents')
+          .upload(`id_proofs/${fileName}`, idProofFile);
+          
+        if (uploadErr) throw uploadErr;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('tenant-documents')
+          .getPublicUrl(`id_proofs/${fileName}`);
+          
+        id_proof_url = publicUrl;
+      }
 
-    const res = await register(name, email, phone, password, role, building, additionalDetails);
-    setIsLoading(false);
-    if (res.error) {
-      setError(res.error);
+      const additionalDetails = {
+        dob,
+        age: parseInt(age) || null,
+        blood_group: bloodGroup,
+        father_name: fatherName,
+        father_phone: fatherPhone,
+        id_proof_type: idProofType,
+        aadhaar_number: idNumber,
+        expected_stay: expectedStay,
+        occupation,
+        permanent_address: permanentAddress,
+        previous_address: previousAddress,
+        office_name: officeName,
+        office_address: officeAddress,
+        office_phone: officePhone,
+        reference_1: reference1,
+        reference_2: reference2,
+        photo_url,
+        id_proof_url
+      };
+
+      const res = await register(name, email, phone, password, role, building, additionalDetails);
+      setIsLoading(false);
+      if (res.error) {
+        setError(res.error);
+      }
+    } catch (err: any) {
+      setIsLoading(false);
+      setError(err.message || 'An error occurred during file upload or registration.');
     }
   };
 
@@ -476,10 +534,10 @@ export const AuthScreen: React.FC = () => {
                       <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-slate-200 dark:bg-slate-800 -z-10" />
                       <div 
                         className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-blue-500 transition-all duration-300 -z-10" 
-                        style={{ width: `${((step - 1) / 3) * 100}%` }}
+                        style={{ width: `${((step - 1) / 4) * 100}%` }}
                       />
                       
-                      {[1, 2, 3, 4].map((s) => (
+                      {[1, 2, 3, 4, 5].map((s) => (
                         <button
                           key={s}
                           type="button"
@@ -514,6 +572,7 @@ export const AuthScreen: React.FC = () => {
                       <span className={step === 2 ? "text-blue-600 dark:text-blue-400" : ""}>Personal</span>
                       <span className={step === 3 ? "text-blue-600 dark:text-blue-400" : ""}>Stay & ID</span>
                       <span className={step === 4 ? "text-blue-600 dark:text-blue-400" : ""}>Details</span>
+                      <span className={step === 5 ? "text-blue-600 dark:text-blue-400" : ""}>Docs</span>
                     </div>
                   </div>
 
@@ -915,6 +974,64 @@ export const AuthScreen: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Step 5: Document Upload */}
+                  {step === 5 && (
+                    <div className="space-y-4 animate-in fade-in duration-200">
+                      {/* Passport Photo */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Passport Size Photo</label>
+                        <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-4 text-center hover:border-blue-500/50 transition-colors relative cursor-pointer">
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) setPhotoFile(file);
+                            }}
+                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                          />
+                          {photoFile ? (
+                            <div className="flex flex-col items-center">
+                              <img src={URL.createObjectURL(photoFile)} className="w-16 h-16 object-cover rounded-xl mb-2" alt="Preview" />
+                              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{photoFile.name}</span>
+                            </div>
+                          ) : (
+                            <div className="text-slate-500 dark:text-slate-400">
+                              <p className="text-xs font-semibold">Click to upload Passport Photo</p>
+                              <p className="text-[10px] mt-0.5">Supports PNG, JPG, JPEG (Max 5MB)</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* ID Proof Document */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Aadhaar Card / ID Proof Document</label>
+                        <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-4 text-center hover:border-blue-500/50 transition-colors relative cursor-pointer">
+                          <input 
+                            type="file" 
+                            accept="image/*,application/pdf" 
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) setIdProofFile(file);
+                            }}
+                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                          />
+                          {idProofFile ? (
+                            <div className="flex flex-col items-center">
+                              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{idProofFile.name}</span>
+                            </div>
+                          ) : (
+                            <div className="text-slate-500 dark:text-slate-400">
+                              <p className="text-xs font-semibold">Click to upload ID Proof Document</p>
+                              <p className="text-[10px] mt-0.5">Supports PNG, JPG, PDF (Max 5MB)</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Navigation / Action Buttons */}
                   <div className="flex gap-3 pt-2">
                     {step > 1 && (
@@ -929,7 +1046,7 @@ export const AuthScreen: React.FC = () => {
                       </button>
                     )}
                     
-                    {step < 4 ? (
+                    {step < 5 ? (
                       <button
                         type="button"
                         onClick={() => {
