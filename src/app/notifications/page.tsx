@@ -39,14 +39,6 @@ const itemVariants = {
   }
 };
 
-interface MockNotification {
-  id: string;
-  title: string;
-  description: string;
-  timestamp: string;
-  read: boolean;
-}
-
 export default function NotificationsPage() {
   const { notifications, markNotificationsAsRead } = useApp();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
@@ -55,7 +47,7 @@ export default function NotificationsPage() {
     markNotificationsAsRead();
   };
 
-  const getNotificationConfig = (title: string, read: boolean) => {
+  const getNotificationConfig = (title: string) => {
     const lowercaseTitle = title.toLowerCase();
     
     if (lowercaseTitle.includes('technician') || lowercaseTitle.includes('request') || lowercaseTitle.includes('repair') || lowercaseTitle.includes('maintenance')) {
@@ -114,39 +106,7 @@ export default function NotificationsPage() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const earlierNotifications: MockNotification[] = [
-    {
-      id: "earlier-1",
-      title: "Rent Bill Receipt Available",
-      description: "Receipt for May 2026 rent payment has been generated. You can view or download it from the payments ledger.",
-      timestamp: "3 days ago",
-      read: true
-    },
-    {
-      id: "earlier-2",
-      title: "AC Filter Cleaning Completed",
-      description: "The scheduled maintenance request for AC filter cleaning in Room 302 has been resolved successfully.",
-      timestamp: "5 days ago",
-      read: true
-    },
-    {
-      id: "earlier-3",
-      title: "Visitor Gate Pass Generated",
-      description: "A guest gate pass has been generated for Rohit Sharma (Friend) valid for tomorrow between 5:00 PM and 10:00 PM.",
-      timestamp: "1 week ago",
-      read: true
-    },
-    {
-      id: "earlier-4",
-      title: "Weekly Food Menu Updated",
-      description: "The meal menu for the upcoming week has been updated by the kitchen staff. Please select your dietary options.",
-      timestamp: "1 week ago",
-      read: true
-    }
-  ];
-
-  const currentNotifications = notifications.map(n => ({ ...n, id: `current-${n.id}` }));
-  const allList = [...currentNotifications, ...earlierNotifications];
+  const allList = notifications;
   
   const filteredNotifications = allList.filter(n => {
     if (filter === 'unread') return !n.read;
@@ -239,7 +199,7 @@ export default function NotificationsPage() {
               <div className="flex flex-col gap-1">
                 <h3 className="font-extrabold text-slate-900 dark:text-white text-base">All Caught Up</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-[280px] leading-relaxed">
-                  No new notifications match your filter. We'll alert you when something updates!
+                  No new notifications match your filter. We&apos;ll alert you when something updates!
                 </p>
               </div>
             </CardContent>
@@ -252,7 +212,7 @@ export default function NotificationsPage() {
         >
           <AnimatePresence mode="popLayout">
             {filteredNotifications.map((notif) => {
-              const config = getNotificationConfig(notif.title, notif.read);
+              const config = getNotificationConfig(notif.title);
               return (
                 <motion.div
                   key={notif.id}

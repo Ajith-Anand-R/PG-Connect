@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useApp } from '@/context/AppContext';
+import { useApp, Bill } from '@/context/AppContext';
 import { 
   CreditCard, 
   Download, 
@@ -15,7 +15,6 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog,
@@ -56,6 +55,7 @@ export default function PaymentsPage() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMobile(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
   }, []);
 
@@ -94,7 +94,7 @@ export default function PaymentsPage() {
     }, 1000);
   };
 
-  const getUpiUrl = (app: string, bill: any) => {
+  const getUpiUrl = (app: string, bill: Bill | null | undefined) => {
     let phoneVpa = "";
     if (tenant.pgUpiNumber) {
       const cleanPhone = tenant.pgUpiNumber.replace(/\D/g, ''); 

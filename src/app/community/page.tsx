@@ -13,12 +13,10 @@ import {
   Info,
   ChevronRight,
   Image as ImageIcon,
-  Sparkles,
-  MapPin,
-  Share2
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
   Dialog, 
@@ -53,29 +51,7 @@ const itemVariants = {
   }
 };
 
-interface Comment {
-  id: string;
-  author: string;
-  avatar: string;
-  text: string;
-  time: string;
-}
 
-interface FeedPost {
-  id: string;
-  author: string;
-  room: string;
-  avatar: string;
-  time: string;
-  category: 'Marketplace' | 'Discussion';
-  type: 'Selling' | 'Discussion';
-  title: string;
-  content: string;
-  image?: string;
-  likes: number;
-  comments: Comment[];
-  likedByMe?: boolean;
-}
 
 export default function CommunityPage() {
   const { 

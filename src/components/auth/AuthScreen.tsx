@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { supabase } from '@/lib/supabase';
 import { 
@@ -228,7 +228,7 @@ export const AuthScreen: React.FC = () => {
       if (photoFile) {
         const fileExt = photoFile.name.split('.').pop();
         const fileName = `photo_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const { data, error: uploadErr } = await supabase.storage
+        const { error: uploadErr } = await supabase.storage
           .from('tenant-documents')
           .upload(`photos/${fileName}`, photoFile);
           
@@ -245,7 +245,7 @@ export const AuthScreen: React.FC = () => {
       if (idProofFile) {
         const fileExt = idProofFile.name.split('.').pop();
         const fileName = `id_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const { data, error: uploadErr } = await supabase.storage
+        const { error: uploadErr } = await supabase.storage
           .from('tenant-documents')
           .upload(`id_proofs/${fileName}`, idProofFile);
           
@@ -284,9 +284,10 @@ export const AuthScreen: React.FC = () => {
       if (res.error) {
         setError(res.error);
       }
-    } catch (err: any) {
+    } catch (err) {
       setIsLoading(false);
-      setError(err.message || 'An error occurred during file upload or registration.');
+      const msg = err instanceof Error ? err.message : 'An error occurred during file upload or registration.';
+      setError(msg);
     }
   };
 
@@ -1064,7 +1065,7 @@ export const AuthScreen: React.FC = () => {
                                 setIsLoading(false);
                                 return;
                               }
-                            } catch (err) {
+                            } catch {
                               setError("Error validating invite token. Please try again.");
                               setIsLoading(false);
                               return;

@@ -148,7 +148,7 @@ export default function NoticesPage() {
               )}
             </motion.div>
           ) : (
-            filteredNotices.map((notice, idx) => {
+            filteredNotices.map((notice) => {
               const isUrgent = notice.category === 'Maintenance';
               return (
                 <motion.div

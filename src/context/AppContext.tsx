@@ -150,7 +150,7 @@ interface AppContextType {
   userRole: 'Tenant' | null;
   login: (emailOrPhone: string, password?: string) => Promise<{ error: string | null }>;
   logout: () => void;
-  register: (name: string, email: string, phone: string, password?: string, role?: string, pgId?: string, additionalDetails?: Record<string, any>) => Promise<{ error: string | null }>;
+  register: (name: string, email: string, phone: string, password?: string, role?: string, pgId?: string, additionalDetails?: Record<string, unknown>) => Promise<{ error: string | null }>;
   communityFeed: CommunityFeedPost[];
   addCommunityPost: (title: string, content: string, category: 'Marketplace' | 'Discussion', imageUrl?: string) => Promise<void>;
   likeCommunityPost: (postId: string) => Promise<void>;
@@ -417,7 +417,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ];
 
             if (dbMsgs) {
-              dbMsgs.forEach((m: any) => {
+              dbMsgs.forEach((m: { id: number | string; sender_name: string; text: string; created_at: string; sender_id: string; thread_id: string }) => {
                 const msgObj: Message = {
                   id: m.id.toString(),
                   senderName: m.sender_name,
@@ -527,16 +527,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (dbTenantsRoom) {
             dbTenantsRoom.forEach(t => {
               if (t.user_id && t.rooms) {
-                const roomData: any = t.rooms;
+                const roomData = t.rooms as unknown as { room_number: string | number }[] | { room_number: string | number } | null;
                 const roomNumber = Array.isArray(roomData) ? roomData[0]?.room_number : roomData?.room_number;
                 tenantRoomMap[t.user_id] = roomNumber ? `Room ${roomNumber}` : 'Room N/A';
               }
             });
           }
 
-          if (dbPosts) {
-            const postsMapped = dbPosts.map((p: any) => {
-              const authorUser = p.users;
+            const postsMapped = dbPosts ? dbPosts.map((p: {
+              id: number | string;
+              created_at: string;
+              title: string;
+              content: string;
+              category: string;
+              type: string;
+              image_url: string | null;
+              user_id: string;
+              users: { name: string; photo: string | null }[] | { name: string; photo: string | null } | null;
+            }) => {
+              const authorUser = Array.isArray(p.users) ? p.users[0] : p.users;
               const authorName = authorUser ? authorUser.name : 'Unknown';
               const authorRoom = p.user_id ? (tenantRoomMap[p.user_id] || 'Room N/A') : 'Room N/A';
               const authorAvatar = authorUser ? (authorUser.photo || '') : '';
@@ -548,13 +557,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               const postComments = dbComments 
                 ? dbComments
                     .filter(c => c.post_id === p.id)
-                    .map((c: any) => ({
+                    .map((c: {
+                    id: number | string;
+                    created_at: string;
+                    post_id: number;
+                    text: string;
+                    users: { name: string; photo: string | null }[] | { name: string; photo: string | null } | null;
+                  }) => {
+                    const commentUser = Array.isArray(c.users) ? c.users[0] : c.users;
+                    return {
                       id: c.id.toString(),
-                      author: c.users ? c.users.name : 'Unknown',
-                      avatar: c.users ? (c.users.photo || '') : '',
+                      author: commentUser ? commentUser.name : 'Unknown',
+                      avatar: commentUser ? (commentUser.photo || '') : '',
                       text: c.text,
                       time: new Date(c.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })
-                    }))
+                    };
+                  })
                 : [];
 
               return {
@@ -572,11 +590,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 comments: postComments,
                 likedByMe: likedByMe
               };
-            });
+            }) : [];
             setCommunityFeed(postsMapped);
           }
         }
-      }
     } catch (err) {
       console.error('Error synchronizing data:', err);
     }
@@ -586,7 +603,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     let sub: ReturnType<typeof supabase.channel> | null = null;
     let msgSub: ReturnType<typeof supabase.channel> | null = null;
-    let subscription: any = null;
+    let subscription: { unsubscribe: () => void } | null = null;
 
     const setupAuth = async () => {
       let isInitial = true;
@@ -726,7 +743,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     password?: string, 
     _role?: string, 
     pgIdOrToken?: string,
-    additionalDetails?: Record<string, any>
+    additionalDetails?: Record<string, unknown>
   ) => {
     try {
       const { error } = await supabase.auth.signUp({
