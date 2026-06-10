@@ -170,7 +170,7 @@ export default function PaymentsPage() {
               Outstanding Dues
             </span>
             <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-bold text-slate-900 dark:text-white">$</span>
+              <span className="text-3xl font-bold text-slate-900 dark:text-white">₹</span>
               <span className="text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                 {totalBalance.toFixed(2)}
               </span>
@@ -240,7 +240,7 @@ export default function PaymentsPage() {
               <div className="flex items-center gap-3">
                 <div className="flex flex-col items-end">
                   <span className="text-sm font-bold text-slate-900 dark:text-white">
-                    ${bill.amount.toFixed(2)}
+                    ₹{bill.amount.toFixed(2)}
                   </span>
                   <Badge 
                     className={`text-[9px] font-bold py-0.5 px-2 mt-1 border-transparent ${
@@ -403,7 +403,7 @@ export default function PaymentsPage() {
                       <p className="text-xs text-slate-500 mt-1">Card ending in *{tenant.cardLastFour || '4242'}</p>
                     </div>
                     <span className="text-lg font-extrabold text-slate-900 dark:text-white">
-                      ${bills.find(b => b.id === selectedBill)?.amount.toFixed(2)}
+                      ₹{bills.find(b => b.id === selectedBill)?.amount.toFixed(2)}
                     </span>
                   </div>
                 )}
@@ -453,7 +453,7 @@ export default function PaymentsPage() {
                 </DialogHeader>
 
                 <DialogDescription className="text-xs text-slate-500">
-                  Select an app to pay. It will open and prefill owner details and amount of <span className="font-extrabold text-slate-800 dark:text-slate-100">${bills.find(b => b.id === selectedBill)?.amount.toFixed(2)}</span>.
+                  Select an app to pay. It will open and prefill owner details and amount of <span className="font-extrabold text-slate-800 dark:text-slate-100">₹{bills.find(b => b.id === selectedBill)?.amount.toFixed(2)}</span>.
                 </DialogDescription>
 
                 {/* Owner info callout */}
@@ -586,7 +586,7 @@ export default function PaymentsPage() {
                       <div className="flex justify-between border-t border-slate-200/50 dark:border-slate-800 pt-1.5 mt-1">
                         <span className="font-bold text-slate-500">Amount Due:</span>
                         <span className="font-extrabold text-lg text-primary">
-                          ${bills.find(b => b.id === selectedBill)?.amount.toFixed(2)}
+                          ₹{bills.find(b => b.id === selectedBill)?.amount.toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -627,7 +627,7 @@ export default function PaymentsPage() {
                 <DialogHeader>
                   <DialogTitle className="text-xl font-extrabold text-slate-900 dark:text-white">Verify Payment</DialogTitle>
                   <DialogDescription className="text-xs text-slate-500 mt-1.5">
-                    Did you complete the payment of <span className="font-extrabold text-slate-800 dark:text-slate-100">${bills.find(b => b.id === selectedBill)?.amount.toFixed(2)}</span> in your UPI App?
+                    Did you complete the payment of <span className="font-extrabold text-slate-800 dark:text-slate-100">₹{bills.find(b => b.id === selectedBill)?.amount.toFixed(2)}</span> in your UPI App?
                   </DialogDescription>
                 </DialogHeader>
 

@@ -324,7 +324,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             emergencyContact: tenantDetails.emergency_contact || 'Not Configured',
             cardLastFour: tenantDetails.card_last_four || '',
             deposit: tenantDetails.deposit 
-              ? `$${parseFloat(tenantDetails.deposit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+              ? `₹${parseFloat(tenantDetails.deposit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
               : 'Not Configured',
             pgUpiId: tenantDetails.pgs?.upi_id || '',
             pgUpiNumber: tenantDetails.pgs?.upi_number || '',

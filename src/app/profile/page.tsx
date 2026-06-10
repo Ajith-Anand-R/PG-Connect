@@ -350,14 +350,14 @@ export default function ProfilePage() {
                 {(() => {
                   const rentBill = bills.find(b => b.category === 'Rent');
                   return rentBill 
-                    ? `$${rentBill.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / month` 
-                    : '$1,250.00 / month';
+                    ? `₹${rentBill.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / month` 
+                    : '₹1,250.00 / month';
                 })()}
               </span>
             </div>
             <div className="flex justify-between py-2">
               <span className="text-slate-400">Security Deposit Refundable</span>
-              <span className="font-semibold text-slate-900 dark:text-white">{tenant.deposit || '$2,500.00'}</span>
+              <span className="font-semibold text-slate-900 dark:text-white">{tenant.deposit || '₹2,500.00'}</span>
             </div>
 
             <div className="bg-slate-50 dark:bg-slate-900/60 p-3 rounded-lg border border-slate-100 dark:border-slate-800 flex gap-2.5 mt-2">

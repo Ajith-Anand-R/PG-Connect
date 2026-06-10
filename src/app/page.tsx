@@ -109,7 +109,7 @@ export default function DashboardPage() {
                 <div className="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 flex flex-col justify-between min-h-[110px]">
                   <div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{rentBill.title}</p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-white">${rentBill.amount.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-white">₹{rentBill.amount.toLocaleString()}</p>
                   </div>
                   <div className="mt-3 inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold px-2.5 py-1 rounded-full w-max">
                     <CheckCircle2 className="size-3.5" />
@@ -130,7 +130,7 @@ export default function DashboardPage() {
                       <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{electricityBill.title}</p>
                       {electricityBill.status !== 'Paid' && <Bolt className="size-4 text-destructive animate-pulse" />}
                     </div>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-white">${electricityBill.amount}</p>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-white">₹{electricityBill.amount}</p>
                     <p className={`text-[10px] mt-1 ${
                       electricityBill.status === 'Paid' ? 'text-slate-500' : 'text-destructive font-semibold'
                     }`}>
