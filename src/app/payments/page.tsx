@@ -78,7 +78,17 @@ export default function PaymentsPage() {
   };
 
   const getUpiUrl = (app: string, bill: any) => {
-    const ownerVpa = tenant.pgUpiId || "pgowner@upi";
+    // Generate VPA format from owner's phone number if direct UPI ID is not available
+    let phoneVpa = "";
+    if (tenant.pgUpiNumber) {
+      const cleanPhone = tenant.pgUpiNumber.replace(/\D/g, ''); // strip non-digits
+      const last10Digits = cleanPhone.slice(-10); // extract standard 10-digit number
+      if (last10Digits.length === 10) {
+        phoneVpa = `${last10Digits}@upi`;
+      }
+    }
+
+    const ownerVpa = tenant.pgUpiId || phoneVpa || "pgowner@upi";
     const ownerName = tenant.pgUpiName || tenant.pgUpiRegisteredName || tenant.pgName || "PG Owner";
     const amount = bill?.amount || 0;
     const note = `Rent Payment for ${bill?.title || 'Bill'}`;
