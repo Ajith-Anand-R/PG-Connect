@@ -187,6 +187,7 @@ interface AppContextType {
   likeCommunityPost: (postId: string) => Promise<void>;
   addCommunityComment: (postId: string, text: string) => Promise<void>;
   authLoading: boolean;
+  activateStay: () => Promise<{ error: string | null }>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -541,11 +542,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 : 'Not Set';
               return {
                 id: p.id.toString(),
-                title: `${p.month} ${amt > 1000 ? 'Rent' : 'Electricity Bill'}`,
+                title: p.month === 'Security Deposit' ? 'Security Deposit' : `${p.month} ${amt > 1000 ? 'Rent' : 'Electricity Bill'}`,
                 amount: amt,
                 dueDate: p.status === 'paid' ? 'Paid' : `Due by ${formattedDueDate}`,
                 status: p.status === 'paid' ? 'Paid' : p.status === 'overdue' ? 'Overdue' : 'Unpaid',
-                category: amt > 1000 ? 'Rent' : 'Utility'
+                category: p.month === 'Security Deposit' ? 'Deposit' : (amt > 1000 ? 'Rent' : 'Utility')
               };
             }));
           }
@@ -1154,6 +1155,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const activateStay = async () => {
+    if (!userId || !tenant.id) return { error: "No user or tenant session found" };
+    try {
+      const { data: tenantData, error: tErr } = await supabase
+        .from('tenants')
+        .select('bed_id')
+        .eq('id', parseInt(tenant.id))
+        .single();
+      
+      if (tErr || !tenantData) throw new Error(tErr?.message || "Tenant record not found");
+
+      const { error: tenantUpdateErr } = await supabase
+        .from('tenants')
+        .update({ status: 'active' })
+        .eq('id', parseInt(tenant.id));
+
+      if (tenantUpdateErr) throw tenantUpdateErr;
+
+      if (tenantData.bed_id) {
+        const { error: bedUpdateErr } = await supabase
+          .from('beds')
+          .update({ status: 'occupied' })
+          .eq('id', tenantData.bed_id);
+
+        if (bedUpdateErr) throw bedUpdateErr;
+      }
+
+      await fetchData(userId, tenant.email);
+      return { error: null };
+    } catch (err) {
+      console.error('Error activating stay:', err);
+      const msg = err instanceof Error ? err.message : 'An error occurred during activation.';
+      return { error: msg };
+    }
+  };
+
   const addCommunityPost = async (title: string, content: string, category: 'Marketplace' | 'Discussion', imageUrl?: string) => {
     if (!userId || !pgId) return;
     try {
@@ -1276,7 +1313,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addCommunityPost,
       likeCommunityPost,
       addCommunityComment,
-      authLoading
+      authLoading,
+      activateStay
     }}>
       {children}
     </AppContext.Provider>

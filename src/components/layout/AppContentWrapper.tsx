@@ -4,9 +4,10 @@ import React from 'react';
 import { useApp } from '@/context/AppContext';
 import { Nav } from '@/components/navigation/Nav';
 import { AuthScreen } from '@/components/auth/AuthScreen';
+import { UpcomingStayView } from '@/components/prebooked/UpcomingStayView';
 
 export const AppContentWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isLoggedIn, authLoading } = useApp();
+  const { isLoggedIn, authLoading, tenant } = useApp();
 
   if (authLoading) {
     return (
@@ -27,6 +28,14 @@ export const AppContentWrapper: React.FC<{ children: React.ReactNode }> = ({ chi
 
   if (!isLoggedIn) {
     return <AuthScreen />;
+  }
+
+  if (tenant && tenant.status === 'prebooked') {
+    return (
+      <main className="flex-1 w-full max-w-md mx-auto px-4 py-6 md:py-8 flex flex-col gap-6">
+        <UpcomingStayView />
+      </main>
+    );
   }
 
   return (
