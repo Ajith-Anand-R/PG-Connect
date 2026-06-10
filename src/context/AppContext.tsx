@@ -20,6 +20,10 @@ export interface TenantInfo {
   emergencyContact?: string;
   cardLastFour?: string;
   deposit?: string;
+  pgUpiId?: string;
+  pgUpiNumber?: string;
+  pgUpiName?: string;
+  pgUpiRegisteredName?: string;
 }
 
 export interface Menu {
@@ -104,7 +108,7 @@ interface AppContextType {
   notices: Notice[];
   notifications: AppNotification[];
   menuList: Menu[];
-  payBill: (id: string) => void;
+  payBill: (id: string, paymentMethod?: string) => void;
   addRequest: (category: string, title: string, description: string, priority: 'Low' | 'Medium' | 'High') => void;
   addGuestPass: (name: string, relation: string, phone: string, date: string, entryTime: string, exitTime: string) => Promise<void> | void;
   sendChatMessage: (threadId: string, text: string) => void;
@@ -145,7 +149,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     joiningDate: "...",
     gateId: "...",
     email: "",
-    phone: ""
+    phone: "",
+    pgUpiId: "",
+    pgUpiNumber: "",
+    pgUpiName: "",
+    pgUpiRegisteredName: ""
   });
 
   // Data States
@@ -316,7 +324,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             cardLastFour: tenantDetails.card_last_four || '',
             deposit: tenantDetails.deposit 
               ? `$${parseFloat(tenantDetails.deposit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
-              : 'Not Configured'
+              : 'Not Configured',
+            pgUpiId: tenantDetails.pgs?.upi_id || '',
+            pgUpiNumber: tenantDetails.pgs?.upi_number || '',
+            pgUpiName: tenantDetails.pgs?.upi_name || '',
+            pgUpiRegisteredName: tenantDetails.pgs?.upi_registered_name || ''
           };
           setTenant(tInfo);
 
@@ -513,7 +525,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Pay Bill (Tenant side)
-  const payBill = async (id: string) => {
+  const payBill = async (id: string, paymentMethod: string = 'Card') => {
     if (!id) return;
     try {
       const { error } = await supabase
@@ -521,7 +533,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .update({
           status: 'paid',
           payment_date: new Date().toISOString().split('T')[0],
-          payment_method: 'Card'
+          payment_method: paymentMethod
         })
         .eq('id', parseInt(id));
 
