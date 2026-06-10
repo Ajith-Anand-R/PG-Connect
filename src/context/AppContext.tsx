@@ -70,6 +70,18 @@ export interface GuestPass {
   qrCodeToken: string;
 }
 
+export interface Parcel {
+  id: string;
+  pgId: string;
+  tenantId: string;
+  deliveryCompany: string;
+  parcelPhotoUrl: string | null;
+  status: 'at_gate' | 'collected' | 'returned';
+  verificationOtp: string;
+  receivedAt: string;
+  collectedAt: string | null;
+}
+
 export interface Message {
   id: string;
   senderName: string;
@@ -132,6 +144,11 @@ interface AppContextType {
   bills: Bill[];
   requests: ServiceRequest[];
   guestPasses: GuestPass[];
+  parcels: Parcel[];
+  staffLogs: any[];
+  incomingRequest: any | null;
+  setIncomingRequest: (req: any | null) => void;
+  updateVisitorApproval: (logId: string, status: 'approved' | 'rejected' | 'leave_at_gate') => Promise<void>;
   chats: ChatThread[];
   notices: Notice[];
   notifications: AppNotification[];
@@ -198,6 +215,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [bills, setBills] = useState<Bill[]>([]);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [guestPasses, setGuestPasses] = useState<GuestPass[]>([]);
+  const [parcels, setParcels] = useState<Parcel[]>([]);
+  const [staffLogs, setStaffLogs] = useState<any[]>([]);
+  const [incomingRequest, setIncomingRequest] = useState<any | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [menuList, setMenuList] = useState<Menu[]>([]);
@@ -392,6 +412,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               exitTime: v.exit_time,
               qrCodeToken: v.qr_code_token
             })));
+          }
+
+          // Fetch Parcels from parcels database table
+          const { data: dbParcels } = await supabase
+            .from('parcels')
+            .select('*')
+            .eq('tenant_id', tenantDetails.id)
+            .order('id', { ascending: false });
+
+          if (dbParcels) {
+            setParcels(dbParcels.map((p: any) => ({
+              id: p.id.toString(),
+              pgId: p.pg_id.toString(),
+              tenantId: p.tenant_id.toString(),
+              deliveryCompany: p.delivery_company,
+              parcelPhotoUrl: p.parcel_photo_url,
+              status: p.status as 'at_gate' | 'collected' | 'returned',
+              verificationOtp: p.verification_otp,
+              receivedAt: p.received_at,
+              collectedAt: p.collected_at
+            })));
+          }
+
+          // Fetch property-wide daily help logs
+          const { data: dbStaffLogs } = await supabase
+            .from('visitor_logs')
+            .select('*')
+            .eq('pg_id', userProfile.pg_id)
+            .eq('visitor_type', 'daily_help')
+            .order('id', { ascending: false });
+
+          if (dbStaffLogs) {
+            setStaffLogs(dbStaffLogs);
           }
 
           // Seed dynamic chats from database
@@ -631,8 +684,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Setup real-time subscription for instant syncing
           sub = supabase
             .channel('schema-db-changes')
-            .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+            .on('postgres_changes', { event: '*', schema: 'public' }, async (payload) => {
               if (payload.table === 'messages') return;
+
+              // Check if unexpected visitor is pending approval
+              if (payload.table === 'visitor_logs' && (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE')) {
+                const newLog = payload.new;
+                if (newLog && newLog.approval_status === 'pending') {
+                  // Verify this tenant is the host
+                  const { data: tenantDetails } = await supabase
+                    .from('tenants')
+                    .select('id')
+                    .eq('user_id', session.user.id)
+                    .single();
+                  if (tenantDetails && Number(newLog.tenant_id) === Number(tenantDetails.id)) {
+                    setIncomingRequest(newLog);
+                  }
+                }
+              }
+
               fetchData(session.user.id, session.user.email || '');
             })
             .subscribe();
@@ -1129,12 +1199,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateVisitorApproval = async (logId: string, status: 'approved' | 'rejected' | 'leave_at_gate') => {
+    try {
+      const { error } = await supabase
+        .from('visitor_logs')
+        .update({ approval_status: status })
+        .eq('id', parseInt(logId));
+
+      if (error) throw error;
+      setIncomingRequest((prev: any) => prev && prev.id.toString() === logId ? null : prev);
+      if (userId) {
+        await fetchData(userId, tenant.email);
+      }
+    } catch (err) {
+      console.error('Error updating visitor approval:', err);
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       tenant,
       bills,
       requests,
       guestPasses,
+      parcels,
+      staffLogs,
+      incomingRequest,
+      setIncomingRequest,
+      updateVisitorApproval,
       chats,
       notices,
       notifications,

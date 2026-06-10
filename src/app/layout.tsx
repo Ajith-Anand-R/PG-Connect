@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
 import { AppContentWrapper } from "@/components/layout/AppContentWrapper";
+import { IncomingGateRequestModal } from "@/components/IncomingGateRequestModal";
 
 const sansFont = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -48,6 +49,7 @@ export default function RootLayout({
           <AppContentWrapper>
             {children}
           </AppContentWrapper>
+          <IncomingGateRequestModal />
         </AppProvider>
         
         {/* PWA Service Worker Registration */}
