@@ -68,6 +68,14 @@ export interface GuestPass {
   entryTime: string;
   exitTime: string;
   qrCodeToken: string;
+  checkInTime?: string | null;
+  checkOutTime?: string | null;
+  approvalStatus?: string | null;
+  visitorType?: string | null;
+  photoUrl?: string | null;
+  vehicleNumber?: string | null;
+  purpose?: string | null;
+  deliveryCompany?: string | null;
 }
 
 export interface Parcel {
@@ -402,7 +410,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             .order('id', { ascending: false });
 
           if (dbVisitors) {
-            setGuestPasses(dbVisitors.map((v: { id: number; visitor_name: string; relationship: string; phone: string; date: string; entry_time: string; exit_time: string; qr_code_token: string }) => ({
+            setGuestPasses(dbVisitors.map((v: any) => ({
               id: v.id.toString(),
               visitorName: v.visitor_name,
               relationship: v.relationship,
@@ -410,8 +418,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               date: v.date,
               entryTime: v.entry_time,
               exitTime: v.exit_time,
-              qrCodeToken: v.qr_code_token
+              qrCodeToken: v.qr_code_token,
+              checkInTime: v.check_in_time,
+              checkOutTime: v.check_out_time,
+              approvalStatus: v.approval_status,
+              visitorType: v.visitor_type,
+              photoUrl: v.photo_url,
+              vehicleNumber: v.vehicle_number,
+              purpose: v.purpose,
+              deliveryCompany: v.delivery_company
             })));
+            
+            const pendingLog = dbVisitors.find((v: any) => v.approval_status === 'pending');
+            if (pendingLog) {
+              setIncomingRequest(pendingLog);
+            } else {
+              setIncomingRequest(null);
+            }
+          } else {
+            setIncomingRequest(null);
           }
 
           // Fetch Parcels from parcels database table

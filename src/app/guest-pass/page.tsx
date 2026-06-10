@@ -53,6 +53,18 @@ const itemVariants = {
 export default function GuestPassPage() {
   const { guestPasses, addGuestPass, tenant, parcels, staffLogs } = useApp();
   const [activeTab, setActiveTab] = useState<'passes' | 'parcels' | 'help'>('passes');
+  
+  const activePasses = guestPasses.filter(pass => 
+    pass.visitorType === 'guest' && 
+    !pass.checkInTime && 
+    pass.approvalStatus === 'approved'
+  );
+
+  const historyLogs = guestPasses.filter(pass => 
+    pass.checkInTime || 
+    pass.approvalStatus === 'rejected' || 
+    pass.approvalStatus === 'leave_at_gate'
+  );
   const [isNewPassOpen, setIsNewPassOpen] = useState(false);
   const [selectedPass, setSelectedPass] = useState<GuestPass | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
@@ -190,7 +202,7 @@ export default function GuestPassPage() {
               <h2 className="font-extrabold text-lg text-slate-900 dark:text-white">Active Passes</h2>
             </motion.div>
 
-            {guestPasses.length === 0 ? (
+            {activePasses.length === 0 ? (
               <motion.div variants={itemVariants}>
                 <Card className="glass-card border-dashed border-slate-205 dark:border-slate-800 bg-transparent py-10 rounded-3xl">
                   <CardContent className="flex flex-col items-center justify-center text-center p-6 gap-3">
@@ -209,7 +221,7 @@ export default function GuestPassPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <AnimatePresence>
-                  {guestPasses.map((pass) => (
+                  {activePasses.map((pass) => (
                     <motion.div
                       key={pass.id}
                       variants={itemVariants}
@@ -270,28 +282,56 @@ export default function GuestPassPage() {
             <motion.div variants={itemVariants}>
               <Card className="glass-card border-transparent shadow-none rounded-3xl overflow-hidden">
                 <div className="divide-y divide-slate-100/30 dark:divide-slate-900/30">
-                  {historyPasses.map((pass) => (
-                    <div 
-                      key={pass.id} 
-                      className="p-4.5 hover:bg-white/20 dark:hover:bg-slate-900/20 transition-colors flex items-center justify-between"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-slate-100/50 dark:bg-slate-900/60 flex items-center justify-center text-slate-400">
-                          <User className="size-4.5" />
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-900 dark:text-white">{pass.visitorName}</h4>
-                          <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 font-semibold">
-                            {pass.type} • {pass.date}
-                          </p>
-                        </div>
-                      </div>
-
-                      <Badge className="bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border-transparent text-[9px] font-bold py-0.5 px-2 rounded-full">
-                        {pass.status}
-                      </Badge>
+                  {historyLogs.length === 0 ? (
+                    <div className="p-8 text-center text-xs text-slate-400 dark:text-slate-500 font-bold">
+                      No past visitor activity recorded.
                     </div>
-                  ))}
+                  ) : (
+                    historyLogs.map((log) => {
+                      const isDelivery = log.visitorType === 'delivery';
+                      
+                      const getStatusBadge = () => {
+                        if (log.approvalStatus === 'rejected') {
+                          return { label: "Denied", style: "bg-rose-500/10 text-rose-600 border-rose-500/10" };
+                        }
+                        if (log.approvalStatus === 'leave_at_gate') {
+                          return { label: "Left at Gate", style: "bg-blue-500/10 text-blue-600 border-blue-500/10" };
+                        }
+                        if (log.checkOutTime) {
+                          return { label: "Checked Out", style: "bg-slate-100 text-slate-500 border-slate-200" };
+                        }
+                        if (log.checkInTime) {
+                          return { label: "Checked In", style: "bg-emerald-500/10 text-emerald-600 border-emerald-500/10" };
+                        }
+                        return { label: "Approved", style: "bg-indigo-500/10 text-indigo-650 border-indigo-500/10" };
+                      };
+                      
+                      const badge = getStatusBadge();
+
+                      return (
+                        <div 
+                          key={log.id} 
+                          className="p-4.5 hover:bg-white/20 dark:hover:bg-slate-900/20 transition-colors flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-slate-100/50 dark:bg-slate-900/60 flex items-center justify-center text-slate-400">
+                              {isDelivery ? <Package className="size-4.5" /> : <User className="size-4.5" />}
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-bold text-slate-900 dark:text-white">{log.visitorName}</h4>
+                              <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 font-semibold">
+                                {isDelivery ? `${log.deliveryCompany || 'Courier'} Delivery` : log.relationship} • {log.date}
+                              </p>
+                            </div>
+                          </div>
+
+                          <Badge className={`${badge.style} border text-[9px] font-bold py-0.5 px-2 rounded-full`}>
+                            {badge.label}
+                          </Badge>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </Card>
             </motion.div>
