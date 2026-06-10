@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useApp, GuestPass } from '@/context/AppContext';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   UserCheck, 
   Plus, 
@@ -11,7 +12,8 @@ import {
   ExternalLink,
   History,
   Check,
-  Share2
+  Share2,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,6 +30,24 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15, scale: 0.98 },
+  show: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: { type: "spring" as const, stiffness: 300, damping: 25 } 
+  }
+};
+
 export default function GuestPassPage() {
   const { guestPasses, addGuestPass, tenant } = useApp();
   const [isNewPassOpen, setIsNewPassOpen] = useState(false);
@@ -42,8 +62,11 @@ export default function GuestPassPage() {
   const [entryTime, setEntryTime] = useState('14:00');
   const [exitTime, setExitTime] = useState('22:00');
 
-  // Hardcoded historical passes to match the exact designs
-  const historyPasses: { id: string; visitorName: string; relationship: string; phone: string; date: string; status: string; type: string }[] = [];
+  // Hardcoded historical passes to match the design logs
+  const historyPasses = [
+    { id: '1', visitorName: 'Rohan Sharma', relationship: 'Friend', phone: '+91 9988776655', date: 'Yesterday', status: 'Expired', type: 'Day Pass' },
+    { id: '2', visitorName: 'Mahesh Kumar', relationship: 'Delivery', phone: '+91 9876543210', date: '2 days ago', status: 'Used', type: 'Delivery clearance' }
+  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,9 +91,14 @@ export default function GuestPassPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="flex flex-col gap-6"
+    >
       {/* Header section */}
-      <div className="flex flex-col gap-1.5 md:flex-row md:justify-between md:items-end">
+      <motion.div variants={itemVariants} className="flex flex-col gap-1.5 md:flex-row md:justify-between md:items-end">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             Guest Pass Manager
@@ -79,137 +107,153 @@ export default function GuestPassPage() {
             Create and manage pre-approved visitor gate clearances.
           </p>
         </div>
-      </div>
+      </motion.div>
 
       {/* Hero Invitation Banner */}
-      <div className="bg-primary text-primary-foreground rounded-2xl p-6 shadow-sm relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-5">
+      <motion.div 
+        variants={itemVariants} 
+        className="bg-gradient-to-br from-indigo-600 via-primary to-accent text-white rounded-[24px] p-6 shadow-[0_20px_45px_rgba(88,67,233,0.18)] relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-5 border border-white/10 glow-primary"
+      >
         <div className="absolute inset-0 opacity-15 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at top right, #ffffff 0%, transparent 60%)' }} />
         <div className="z-10 text-center md:text-left">
-          <h2 className="text-lg font-bold mb-1">Need to register a guest?</h2>
-          <p className="text-xs text-primary-foreground/80 dark:text-primary-foreground/90 max-w-sm">
+          <span className="text-[9px] font-black uppercase tracking-widest text-white/80 bg-white/10 px-2 py-0.5 rounded-full inline-flex items-center gap-1 mb-2 border border-white/10">
+            <Sparkles className="size-2.5 animate-pulse" /> Clearances
+          </span>
+          <h2 className="text-lg font-bold">Need to register a guest?</h2>
+          <p className="text-xs text-white/80 dark:text-slate-200 mt-1 max-w-sm leading-relaxed font-semibold">
             Generate a secure QR access pass for parking slots or building security gates instantly.
           </p>
         </div>
         <Button 
           onClick={() => setIsNewPassOpen(true)}
-          className="z-10 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-primary dark:text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm w-full md:w-auto"
+          className="z-10 bg-white hover:bg-slate-50 text-primary hover:text-primary/95 font-bold text-xs px-5 py-3 rounded-xl transition-all shadow-md w-full md:w-auto cursor-pointer"
         >
           <Plus className="size-4 shrink-0" />
           Create New Pass
         </Button>
-      </div>
+      </motion.div>
 
       {/* Active Passes Section */}
       <section className="flex flex-col gap-4">
-        <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+        <motion.div variants={itemVariants} className="flex items-center gap-2 border-b border-slate-100/40 dark:border-slate-800/40 pb-2">
           <UserCheck className="size-5 text-primary" />
-          <h2 className="font-bold text-lg text-slate-900 dark:text-white">Active Passes</h2>
-        </div>
+          <h2 className="font-extrabold text-lg text-slate-900 dark:text-white">Active Passes</h2>
+        </motion.div>
 
         {guestPasses.length === 0 ? (
-          <Card className="border-dashed border-slate-200 dark:border-slate-800 bg-transparent py-10">
-            <CardContent className="flex flex-col items-center justify-center text-center p-6 gap-3">
-              <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-400">
-                <QrCode className="size-6" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-slate-900 dark:text-white">No Active Passes</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-[280px]">
-                  You don&apos;t have any pre-approved guests registered for today.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <motion.div variants={itemVariants}>
+            <Card className="glass-card border-dashed border-slate-205 dark:border-slate-800 bg-transparent py-10 rounded-3xl">
+              <CardContent className="flex flex-col items-center justify-center text-center p-6 gap-3">
+                <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-400">
+                  <QrCode className="size-6" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-white text-sm">No Active Passes</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-[280px]">
+                    You don&apos;t have any pre-approved guests registered for today.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {guestPasses.map((pass) => (
-              <Card 
-                key={pass.id} 
-                className="border-slate-100 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] flex flex-col justify-between hover:shadow-md transition-shadow duration-300"
-              >
-                <CardContent className="p-5 flex flex-col gap-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-400 shrink-0 border border-slate-200 dark:border-slate-800">
-                        <User className="size-5" />
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white">{pass.visitorName}</h4>
-                        <Badge className="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 border-transparent text-[9px] font-bold py-0.5 px-2 mt-1 rounded-full w-max">
-                          {pass.relationship}
-                        </Badge>
-                      </div>
-                    </div>
+            <AnimatePresence>
+              {guestPasses.map((pass) => (
+                <motion.div
+                  key={pass.id}
+                  variants={itemVariants}
+                  layout
+                  className="flex flex-col"
+                >
+                  <Card className="glass-card border-transparent shadow-none rounded-3xl flex flex-col justify-between hover:shadow-sm">
+                    <CardContent className="p-5 flex flex-col gap-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-600 dark:text-slate-450 shrink-0 border border-slate-200/50 dark:border-slate-800/50">
+                            <User className="size-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-slate-900 dark:text-white">{pass.visitorName}</h4>
+                            <Badge className="bg-slate-100/80 text-slate-650 dark:bg-slate-900 dark:text-slate-350 border-transparent text-[9px] font-bold py-0.5 px-2 mt-1 rounded-full w-max">
+                              {pass.relationship}
+                            </Badge>
+                          </div>
+                        </div>
 
-                    <div className="text-right">
-                      <span className="block text-xs font-bold text-emerald-600 dark:text-emerald-400">Active</span>
-                      <span className="text-[9px] text-slate-400 font-semibold">{pass.date}</span>
-                    </div>
-                  </div>
+                        <div className="text-right">
+                          <span className="block text-xs font-bold text-emerald-600 dark:text-emerald-400">Active</span>
+                          <span className="text-[9px] text-slate-400 dark:text-slate-500 font-semibold">{pass.date}</span>
+                        </div>
+                      </div>
 
-                  <div className="border-t border-slate-50 dark:border-slate-900 pt-3 flex justify-between items-center text-xs text-slate-500 dark:text-slate-400">
-                    <div className="flex items-center gap-1">
-                      <Clock className="size-3.5" />
-                      <span>{pass.entryTime} - {pass.exitTime}</span>
-                    </div>
-                    
-                    <Button 
-                      variant="link" 
-                      onClick={() => setSelectedPass(pass)}
-                      className="text-primary font-bold text-xs p-0 h-auto flex items-center gap-0.5"
-                    >
-                      View QR Pass <ExternalLink className="size-3" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                      <div className="border-t border-slate-100/50 dark:border-slate-900/50 pt-3 flex justify-between items-center text-xs text-slate-550 dark:text-slate-400">
+                        <div className="flex items-center gap-1 font-semibold">
+                          <Clock className="size-3.5" />
+                          <span>{pass.entryTime} - {pass.exitTime}</span>
+                        </div>
+                        
+                        <Button 
+                          variant="link" 
+                          onClick={() => setSelectedPass(pass)}
+                          className="text-primary font-bold text-xs p-0 h-auto flex items-center gap-0.5 cursor-pointer hover:underline"
+                        >
+                          View QR Pass <ExternalLink className="size-3" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </section>
 
       {/* History Section */}
       <section className="flex flex-col gap-4">
-        <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-2">
+        <motion.div variants={itemVariants} className="flex items-center gap-2 border-b border-slate-100/40 dark:border-slate-800/40 pb-2">
           <History className="size-5 text-secondary" />
-          <h2 className="font-bold text-lg text-slate-900 dark:text-white">History Logs</h2>
-        </div>
+          <h2 className="font-extrabold text-lg text-slate-900 dark:text-white">History Logs</h2>
+        </motion.div>
 
-        <Card className="border-slate-100 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] overflow-hidden">
-          <div className="divide-y divide-slate-100 dark:divide-slate-900">
-            {historyPasses.map((pass) => (
-              <div 
-                key={pass.id} 
-                className="p-4 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors flex items-center justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-900/60 flex items-center justify-center text-slate-400">
-                    <User className="size-4.5" />
+        <motion.div variants={itemVariants}>
+          <Card className="glass-card border-transparent shadow-none rounded-3xl overflow-hidden">
+            <div className="divide-y divide-slate-100/30 dark:divide-slate-900/30">
+              {historyPasses.map((pass) => (
+                <div 
+                  key={pass.id} 
+                  className="p-4.5 hover:bg-white/20 dark:hover:bg-slate-900/20 transition-colors flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-slate-100/50 dark:bg-slate-900/60 flex items-center justify-center text-slate-400">
+                      <User className="size-4.5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">{pass.visitorName}</h4>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5 font-semibold">
+                        {pass.type} • {pass.date}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">{pass.visitorName}</h4>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      {pass.type} • {pass.date}
-                    </p>
-                  </div>
+
+                  <Badge className={`${
+                    pass.status === 'Expired' || pass.status === 'Used'
+                      ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                      : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                  } border-transparent text-[9px] font-bold py-0.5 px-2 rounded-full`}>
+                    {pass.status}
+                  </Badge>
                 </div>
-
-                <Badge className={`${
-                  pass.status === 'Expired' || pass.status === 'Used'
-                    ? 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
-                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                } border-transparent text-[9px] font-bold py-0.5 px-2 rounded-full`}>
-                  {pass.status}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </Card>
+              ))}
+            </div>
+          </Card>
+        </motion.div>
       </section>
 
       {/* Dialog for Creating Guest Pass */}
       <Dialog open={isNewPassOpen} onOpenChange={setIsNewPassOpen}>
-        <DialogContent className="max-w-md w-full p-6">
+        <DialogContent className="max-w-md w-full p-6 rounded-3xl bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border border-slate-100 dark:border-slate-900 shadow-2xl">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold">Register New Guest</DialogTitle>
             <DialogDescription className="text-xs text-slate-500 mt-1">
@@ -224,9 +268,9 @@ export default function GuestPassPage() {
                 id="guest-name"
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
-                placeholder="e.g. John Doe"
+                placeholder="e.g. Kabir Dev"
                 required
-                className="w-full text-xs"
+                className="w-full text-xs rounded-xl"
               />
             </div>
 
@@ -237,7 +281,7 @@ export default function GuestPassPage() {
                   id="relationship"
                   value={relationship}
                   onChange={(e) => setRelationship(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
                 >
                   <option value="Friend">Friend</option>
                   <option value="Family">Family Member</option>
@@ -252,9 +296,9 @@ export default function GuestPassPage() {
                   id="phone"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+1 (555) 000-0000"
+                  placeholder="+91 99887 76655"
                   required
-                  className="w-full text-xs"
+                  className="w-full text-xs rounded-xl"
                 />
               </div>
             </div>
@@ -267,7 +311,7 @@ export default function GuestPassPage() {
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
-                className="w-full text-xs"
+                className="w-full text-xs rounded-xl"
               />
             </div>
 
@@ -280,7 +324,7 @@ export default function GuestPassPage() {
                   value={entryTime}
                   onChange={(e) => setEntryTime(e.target.value)}
                   required
-                  className="w-full text-xs"
+                  className="w-full text-xs rounded-xl"
                 />
               </div>
 
@@ -292,14 +336,14 @@ export default function GuestPassPage() {
                   value={exitTime}
                   onChange={(e) => setExitTime(e.target.value)}
                   required
-                  className="w-full text-xs"
+                  className="w-full text-xs rounded-xl"
                 />
               </div>
             </div>
 
             <DialogFooter className="mt-2 flex gap-2">
-              <DialogClose render={<Button type="button" variant="outline" className="flex-1 text-xs">Cancel</Button>} />
-              <Button type="submit" className="flex-1 bg-primary text-xs font-bold">
+              <DialogClose render={<Button type="button" variant="outline" className="flex-1 text-xs rounded-xl cursor-pointer">Cancel</Button>} />
+              <Button type="submit" className="flex-1 bg-primary hover:bg-primary/95 text-xs font-bold rounded-xl cursor-pointer">
                 Generate Pass
               </Button>
             </DialogFooter>
@@ -307,9 +351,9 @@ export default function GuestPassPage() {
         </DialogContent>
       </Dialog>
 
-      {/* QR Code Pass Detail Dialog */}
+      {/* QR Code Pass Detail Dialog styled as a Ticket */}
       <Dialog open={selectedPass !== null} onOpenChange={(open) => !open && setSelectedPass(null)}>
-        <DialogContent className="max-w-xs p-6 flex flex-col items-center gap-4">
+        <DialogContent className="max-w-xs p-6 flex flex-col items-center gap-4 rounded-3xl bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border border-slate-100 dark:border-slate-900 shadow-2xl overflow-visible">
           {selectedPass && (
             <>
               <DialogHeader className="text-center items-center">
@@ -319,46 +363,53 @@ export default function GuestPassPage() {
                 </DialogDescription>
               </DialogHeader>
 
-              {/* Digital Pass Frame */}
-              <div className="bg-primary w-full text-white p-5 rounded-2xl flex flex-col items-center gap-4 shadow-md relative overflow-hidden">
+              {/* Digital Pass Ticket Frame */}
+              <div className="bg-gradient-to-br from-indigo-600 via-primary to-accent w-full text-white p-5.5 rounded-[22px] flex flex-col items-center gap-4.5 shadow-lg relative overflow-visible">
+                {/* Pattern overlay */}
                 <div className="absolute inset-0 opacity-15 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at bottom left, #ffffff 0%, transparent 60%)' }} />
                 
                 {/* QR Display */}
-                <div className="w-36 h-36 bg-white p-2.5 rounded-2xl flex items-center justify-center shadow-inner relative">
-                  {/* Styled mock QR grid */}
-                  <div className="w-full h-full rounded flex items-center justify-center bg-slate-100 text-slate-800">
+                <div className="w-36 h-36 bg-white p-2.5 rounded-2xl flex items-center justify-center shadow-inner relative z-10">
+                  <div className="w-full h-full rounded flex items-center justify-center bg-slate-100 text-slate-805">
                     <QrCode className="size-24 text-slate-800" />
                   </div>
                 </div>
 
-                <div className="text-center">
+                <div className="text-center relative z-10">
                   <h3 className="font-bold text-base leading-tight">{selectedPass.visitorName}</h3>
-                  <span className="text-[10px] bg-white/20 text-white font-bold py-0.5 px-2.5 rounded-full inline-block mt-1">
+                  <span className="text-[10px] bg-white/20 text-white font-bold py-0.5 px-3 rounded-full inline-block mt-1.5">
                     {selectedPass.relationship}
                   </span>
                 </div>
 
-                <div className="w-full grid grid-cols-2 gap-3 bg-white/10 p-3 rounded-xl text-center text-[10px] border border-white/10">
+                {/* Ticket notch cutouts */}
+                <div className="absolute top-[68%] -left-3.5 w-7 h-7 rounded-full bg-white dark:bg-slate-950 border-r border-slate-100 dark:border-slate-900 z-20 pointer-events-none" />
+                <div className="absolute top-[68%] -right-3.5 w-7 h-7 rounded-full bg-white dark:bg-slate-950 border-l border-slate-100 dark:border-slate-900 z-20 pointer-events-none" />
+                
+                {/* Perforated stub line */}
+                <div className="w-full border-t border-dashed border-white/20 my-1 relative z-10" />
+
+                <div className="w-full grid grid-cols-2 gap-3 bg-white/10 p-3 rounded-2xl text-center text-[9px] border border-white/10 relative z-10 font-bold">
                   <div>
-                    <span className="opacity-80 block uppercase text-[8px] tracking-wider font-semibold">Pass Date</span>
-                    <span className="font-bold mt-0.5 block">{selectedPass.date}</span>
+                    <span className="opacity-70 block uppercase text-[7px] tracking-wider mb-0.5">Pass Date</span>
+                    <span className="text-white block">{selectedPass.date}</span>
                   </div>
                   <div>
-                    <span className="opacity-80 block uppercase text-[8px] tracking-wider font-semibold">Duration</span>
-                    <span className="font-bold mt-0.5 block">{selectedPass.entryTime} - {selectedPass.exitTime}</span>
+                    <span className="opacity-70 block uppercase text-[7px] tracking-wider mb-0.5">Duration</span>
+                    <span className="text-white block">{selectedPass.entryTime} - {selectedPass.exitTime}</span>
                   </div>
                 </div>
 
-                <div className="text-[8px] opacity-75 uppercase tracking-wide font-semibold">
+                <div className="text-[8.5px] opacity-75 uppercase tracking-widest font-black text-center relative z-10">
                   Invited By: {tenant.name}
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="w-full flex flex-col gap-2">
+              <div className="w-full flex flex-col gap-2 mt-2">
                 <Button 
                   onClick={() => handleShare(selectedPass.qrCodeToken)}
-                  className="w-full bg-primary text-xs font-bold flex items-center justify-center gap-1.5"
+                  className="w-full bg-primary hover:bg-primary/95 text-xs font-bold flex items-center justify-center gap-1.5 rounded-xl cursor-pointer py-5 shadow-sm glow-primary"
                 >
                   {copiedToken === selectedPass.qrCodeToken ? (
                     <>
@@ -372,12 +423,12 @@ export default function GuestPassPage() {
                     </>
                   )}
                 </Button>
-                <DialogClose render={<Button variant="ghost" className="w-full text-xs text-slate-500 font-semibold h-9">Close</Button>} />
+                <DialogClose render={<Button variant="ghost" className="w-full text-xs text-slate-505 font-bold h-9 rounded-xl cursor-pointer">Close</Button>} />
               </div>
             </>
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 }

@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   Wrench,
   AlertCircle,
-  QrCode,
   Smartphone,
   Check,
   ChevronRight,
@@ -27,6 +26,24 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from 'framer-motion';
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15, scale: 0.98 },
+  show: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: { type: "spring" as const, stiffness: 300, damping: 25 } 
+  }
+};
 
 export default function PaymentsPage() {
   const { bills, payBill, tenant } = useApp();
@@ -78,11 +95,10 @@ export default function PaymentsPage() {
   };
 
   const getUpiUrl = (app: string, bill: any) => {
-    // Generate VPA format from owner's phone number if direct UPI ID is not available
     let phoneVpa = "";
     if (tenant.pgUpiNumber) {
-      const cleanPhone = tenant.pgUpiNumber.replace(/\D/g, ''); // strip non-digits
-      const last10Digits = cleanPhone.slice(-10); // extract standard 10-digit number
+      const cleanPhone = tenant.pgUpiNumber.replace(/\D/g, ''); 
+      const last10Digits = cleanPhone.slice(-10); 
       if (last10Digits.length === 10) {
         phoneVpa = `${last10Digits}@upi`;
       }
@@ -134,7 +150,6 @@ export default function PaymentsPage() {
     if (!bill) return;
     const url = getUpiUrl(app, bill);
     window.location.href = url;
-    // Delay slightly then move to confirm status screen
     setTimeout(() => {
       setPaymentStep('confirm_status');
     }, 1000);
@@ -149,89 +164,117 @@ export default function PaymentsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="flex flex-col gap-6"
+    >
       {/* Title */}
-      <header className="flex flex-col gap-1.5">
+      <motion.header variants={itemVariants} className="flex flex-col gap-1.5">
         <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
           Payments & Receipts
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Manage your rent, utilities, and view invoices.
         </p>
-      </header>
+      </motion.header>
 
-      {/* Balance Bento Box */}
-      <Card className="border-slate-100 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] relative overflow-hidden">
-        <CardContent className="p-5 flex flex-col gap-5">
-          <div className="absolute -right-6 -top-6 w-32 h-32 bg-primary/5 rounded-full blur-xl pointer-events-none" />
+      {/* Balance Bento Box styled as a Premium Debit Card */}
+      <motion.div variants={itemVariants}>
+        <div className="relative w-full aspect-[1.75/1] rounded-[28px] bg-gradient-to-br from-indigo-600 via-primary to-accent text-white p-6 overflow-hidden shadow-[0_20px_50px_rgba(88,67,233,0.25)] glow-primary flex flex-col justify-between">
+          {/* Card glow overlays */}
+          <div className="absolute -right-10 -bottom-10 w-44 h-44 bg-cyan-400/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="absolute -left-10 -top-10 w-44 h-44 bg-pink-400/20 rounded-full blur-2xl pointer-events-none" />
           
-          <div className="z-10">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-1">
-              Outstanding Dues
-            </span>
-            <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-bold text-slate-900 dark:text-white">₹</span>
-              <span className="text-5xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                {totalBalance.toFixed(2)}
+          <div className="h-full flex flex-col justify-between relative z-10">
+            {/* Top Card Info */}
+            <div className="flex justify-between items-start">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-white/70">Outstanding Dues</span>
+                <div className="flex items-baseline gap-0.5 mt-1">
+                  <span className="text-xl font-black">₹</span>
+                  <span className="text-4xl font-black tracking-tight">{totalBalance.toFixed(2)}</span>
+                </div>
+              </div>
+              
+              {/* Gold Chip Mockup */}
+              <div className="w-10 h-8 rounded-lg bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 border border-amber-200/50 shadow-inner flex items-center justify-center shrink-0">
+                <div className="w-6 h-5 border border-amber-100/30 rounded" />
+              </div>
+            </div>
+            
+            {/* Middle: Card Number Mask */}
+            <div className="my-2">
+              <span className="text-base font-mono tracking-[0.2em] font-bold text-white/80">
+                •••• •••• •••• {tenant.cardLastFour || '4242'}
               </span>
             </div>
             
-            {totalBalance > 0 && activePayBill ? (
-              <p className="text-xs text-destructive font-semibold mt-2 flex items-center gap-1">
-                <AlertCircle className="size-3.5" />
-                Due soon: {activePayBill.title}
-              </p>
-            ) : (
-              <p className="text-xs text-emerald-600 font-semibold mt-2 flex items-center gap-1">
-                <CheckCircle2 className="size-3.5" />
-                All payments clear!
-              </p>
-            )}
-          </div>
-
-          <div className="z-10 border-t border-slate-100 dark:border-slate-800 pt-4 flex items-center justify-between">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Auto-Pay Method</span>
-              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Visa ending in {tenant.cardLastFour || '4242'}</span>
+            {/* Bottom Card Holder Details */}
+            <div className="flex justify-between items-end">
+              <div className="flex flex-col">
+                <span className="text-[8px] font-bold uppercase tracking-wider text-white/60">Resident Card</span>
+                <span className="text-xs font-bold tracking-wide mt-0.5">{tenant.name}</span>
+              </div>
+              <div className="flex flex-col items-end">
+                {totalBalance > 0 ? (
+                  <Badge className="bg-red-500/30 text-red-100 hover:bg-red-500/30 border-transparent text-[9px] font-bold py-0.5 px-2.5 rounded-full flex items-center gap-1">
+                    <AlertCircle className="size-3" /> Due
+                  </Badge>
+                ) : (
+                  <Badge className="bg-emerald-500/30 text-emerald-100 hover:bg-emerald-500/30 border-transparent text-[9px] font-bold py-0.5 px-2.5 rounded-full flex items-center gap-1">
+                    <CheckCircle2 className="size-3" /> Clear
+                  </Badge>
+                )}
+              </div>
             </div>
-            <Badge variant="outline" className="text-[10px] font-bold text-primary border-primary/20 dark:text-primary">
-              Active
-            </Badge>
           </div>
+        </div>
+      </motion.div>
 
-          {totalBalance > 0 && activePayBill && (
-            <Button 
-              className="w-full bg-primary font-bold transition-transform active:scale-[0.98]"
-              onClick={() => handleOpenPay(activePayBill.id)}
-            >
-              Pay Outstanding Dues
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+      {/* Auto-pay and Action Panel */}
+      <motion.div variants={itemVariants} className="glass-card border-transparent rounded-2xl p-4 flex items-center justify-between shadow-none">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Default Auto-Pay Card</span>
+          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Visa ending in {tenant.cardLastFour || '4242'}</span>
+        </div>
+        {totalBalance > 0 && activePayBill ? (
+          <Button 
+            className="bg-primary hover:bg-primary/95 glow-primary font-bold text-xs py-2 px-4 rounded-xl transition-all active:scale-[0.97]"
+            onClick={() => handleOpenPay(activePayBill.id)}
+          >
+            Pay Now
+          </Button>
+        ) : (
+          <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-transparent text-[10px] font-bold py-0.5 px-3 rounded-full uppercase">
+            Active
+          </Badge>
+        )}
+      </motion.div>
 
       {/* Ledger Summary List */}
-      <div className="flex flex-col gap-3">
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Ledger & Statements</h2>
+      <motion.div variants={itemVariants} className="flex flex-col gap-3">
+        <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">Ledger & Statements</h2>
         <div className="flex flex-col gap-2">
           {bills.map((bill) => (
             <div 
               key={bill.id} 
-              className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 flex items-center justify-between hover:shadow-sm transition-shadow"
+              className="p-4 rounded-2xl bg-white/40 dark:bg-slate-950/25 border border-white/20 dark:border-white/5 flex items-center justify-between hover:shadow-sm transition-all duration-300"
             >
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                   bill.status === 'Paid' 
-                    ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300' 
-                    : 'bg-destructive/10 text-destructive'
+                    ? 'bg-slate-100/50 text-slate-650 dark:bg-slate-900 dark:text-slate-350' 
+                    : 'bg-destructive/10 text-destructive shadow-sm shadow-destructive/5'
                 }`}>
                   {getBillIcon(bill.category)}
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                  <h3 className="text-xs font-bold text-slate-900 dark:text-white">
                     {bill.title}
                   </h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
+                  <p className="text-[10px] text-slate-500 dark:text-slate-450 mt-1 font-semibold">
                     {bill.status === 'Paid' ? `Paid via ${bill.dueDate === 'Paid' ? 'Card' : 'UPI'}` : bill.dueDate}
                   </p>
                 </div>
@@ -239,11 +282,11 @@ export default function PaymentsPage() {
 
               <div className="flex items-center gap-3">
                 <div className="flex flex-col items-end">
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">
                     ₹{bill.amount.toFixed(2)}
                   </span>
                   <Badge 
-                    className={`text-[9px] font-bold py-0.5 px-2 mt-1 border-transparent ${
+                    className={`text-[9px] font-bold py-0.5 px-2 mt-1 border-transparent rounded-full ${
                       bill.status === 'Paid' 
                         ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10' 
                         : 'bg-destructive/10 text-destructive hover:bg-destructive/10'
@@ -257,7 +300,7 @@ export default function PaymentsPage() {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="rounded-full text-slate-500 hover:text-primary active:scale-95 transition-transform"
+                    className="rounded-full text-slate-400 hover:text-primary active:scale-95 transition-transform"
                     title="Download Receipt"
                   >
                     <Download className="size-4" />
@@ -266,7 +309,7 @@ export default function PaymentsPage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="text-xs font-semibold px-3 py-1 border-slate-200 hover:bg-slate-55 dark:border-slate-800 active:scale-[0.98]"
+                    className="text-xs font-bold px-3 py-1 border-slate-200 dark:border-slate-800 hover:bg-slate-50 active:scale-[0.97] rounded-xl cursor-pointer"
                     onClick={() => handleOpenPay(bill.id)}
                   >
                     Pay
@@ -276,38 +319,38 @@ export default function PaymentsPage() {
             </div>
           ))}
         </div>
-      </div>
+      </motion.div>
 
-      {/* Payment confirmation modal */}
+      {/* Payment Confirmation Modal */}
       <Dialog open={payModalOpen} onOpenChange={setPayModalOpen}>
-        <DialogContent className="max-w-[90%] rounded-3xl sm:max-w-md bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border border-slate-100 dark:border-slate-900 shadow-2xl p-6 overflow-hidden">
+        <DialogContent className="max-w-[90%] rounded-3xl sm:max-w-md bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border border-slate-100 dark:border-slate-900 shadow-2xl p-6 overflow-hidden">
           <AnimatePresence mode="wait">
             {paymentStep === 'choose_method' && (
               <motion.div
                 key="choose"
-                initial={{ opacity: 0, x: -10 }}
+                initial={{ opacity: 0, x: -15 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                transition={{ duration: 0.2 }}
+                exit={{ opacity: 0, x: 15 }}
+                transition={{ type: "spring" as const, stiffness: 350, damping: 28 }}
                 className="flex flex-col gap-4"
               >
                 <DialogHeader>
                   <DialogTitle className="text-xl font-extrabold text-slate-900 dark:text-white">Select Payment Method</DialogTitle>
-                  <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
+                  <DialogDescription className="text-xs text-slate-550 dark:text-slate-400">
                     Choose how you would like to clear your outstanding bill.
                   </DialogDescription>
                 </DialogHeader>
 
                 {selectedBill && (
-                  <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 flex justify-between items-center my-1">
+                  <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-805 flex justify-between items-center my-1">
                     <div>
-                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
                         {bills.find(b => b.id === selectedBill)?.title}
                       </p>
-                      <p className="text-[11px] text-slate-500 mt-0.5">Due date: {bills.find(b => b.id === selectedBill)?.dueDate}</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">Due date: {bills.find(b => b.id === selectedBill)?.dueDate}</p>
                     </div>
-                    <span className="text-lg font-extrabold text-slate-900 dark:text-white">
-                      ${bills.find(b => b.id === selectedBill)?.amount.toFixed(2)}
+                    <span className="text-base font-black text-slate-900 dark:text-white">
+                      ₹{bills.find(b => b.id === selectedBill)?.amount.toFixed(2)}
                     </span>
                   </div>
                 )}
@@ -322,20 +365,20 @@ export default function PaymentsPage() {
                         setPaymentStep('upi_qr');
                       }
                     }}
-                    className="group flex items-center justify-between p-4 rounded-2xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all text-left relative overflow-hidden"
+                    className="group flex items-center justify-between p-4 rounded-2xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all text-left relative overflow-hidden cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shrink-0 shadow-sm">
+                      <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shrink-0 shadow-md shadow-primary/10">
                         <Smartphone className="size-5" />
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-bold text-slate-800 dark:text-slate-200">UPI Payments (Instant)</span>
-                          <Badge className="bg-emerald-500/10 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-transparent text-[9px] font-bold py-0.5 px-1.5 rounded-full uppercase tracking-wider">
-                            Recommended
+                          <span className="text-xs font-bold text-slate-800 dark:text-slate-200">UPI Payments (Instant)</span>
+                          <Badge className="bg-emerald-500/10 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-transparent text-[8px] font-black py-0.5 px-1.5 rounded-full uppercase tracking-wider">
+                            FREE
                           </Badge>
                         </div>
-                        <p className="text-[11px] text-slate-500 mt-0.5">Pay via PhonePe, GPay, Paytm, or BHIM</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">Pay via PhonePe, GPay, Paytm, or BHIM</p>
                       </div>
                     </div>
                     <ChevronRight className="size-4 text-slate-400 group-hover:text-primary transition-colors" />
@@ -344,25 +387,25 @@ export default function PaymentsPage() {
                   {/* Card Option */}
                   <button
                     onClick={() => setPaymentStep('card_confirm')}
-                    className="group flex items-center justify-between p-4 rounded-2xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all text-left"
+                    className="group flex items-center justify-between p-4 rounded-2xl border border-slate-100 dark:border-slate-850 hover:bg-slate-50 dark:hover:bg-slate-900 transition-all text-left cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 flex items-center justify-center shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-650 dark:bg-slate-850 dark:text-slate-350 flex items-center justify-center shrink-0">
                         <CreditCard className="size-5" />
                       </div>
                       <div>
-                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200">Saved Credit Card</span>
-                        <p className="text-[11px] text-slate-500 mt-0.5">Visa ending in *{tenant.cardLastFour || '4242'}</p>
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Saved Credit Card</span>
+                        <p className="text-[10px] text-slate-500 mt-0.5">Visa ending in *{tenant.cardLastFour || '4242'}</p>
                       </div>
                     </div>
                     <ChevronRight className="size-4 text-slate-400 group-hover:text-slate-700 transition-colors" />
                   </button>
                 </div>
 
-                <DialogFooter className="mt-4 border-t border-slate-50 dark:border-slate-900 pt-4">
+                <DialogFooter className="mt-4 border-t border-slate-100/50 dark:border-slate-850 pt-4">
                   <Button 
                     variant="outline" 
-                    className="w-full rounded-xl"
+                    className="w-full rounded-xl text-xs font-semibold cursor-pointer"
                     onClick={() => setPayModalOpen(false)}
                   >
                     Cancel
@@ -374,35 +417,35 @@ export default function PaymentsPage() {
             {paymentStep === 'card_confirm' && (
               <motion.div
                 key="card"
-                initial={{ opacity: 0, x: 10 }}
+                initial={{ opacity: 0, x: 15 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
+                exit={{ opacity: 0, x: -15 }}
+                transition={{ type: "spring" as const, stiffness: 350, damping: 28 }}
                 className="flex flex-col gap-4"
               >
                 <DialogHeader className="flex flex-row items-center gap-2 relative">
                   <button 
                     onClick={() => setPaymentStep('choose_method')}
-                    className="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center text-slate-500 absolute -left-2 top-0"
+                    className="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center text-slate-550 absolute -left-2 top-0 cursor-pointer"
                   >
                     <ArrowLeft className="size-4" />
                   </button>
                   <DialogTitle className="text-xl font-extrabold text-slate-900 dark:text-white pl-8">Card Payment</DialogTitle>
                 </DialogHeader>
 
-                <DialogDescription className="text-xs text-slate-505">
+                <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
                   Process checkout for your pending utility bill using your registered payment card.
                 </DialogDescription>
 
                 {selectedBill && (
-                  <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 flex justify-between items-center my-2">
+                  <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-850 flex justify-between items-center my-2">
                     <div>
-                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
                         {bills.find(b => b.id === selectedBill)?.title}
                       </p>
-                      <p className="text-xs text-slate-500 mt-1">Card ending in *{tenant.cardLastFour || '4242'}</p>
+                      <p className="text-[10px] text-slate-500 mt-1 font-semibold">Card ending in *{tenant.cardLastFour || '4242'}</p>
                     </div>
-                    <span className="text-lg font-extrabold text-slate-900 dark:text-white">
+                    <span className="text-lg font-black text-slate-900 dark:text-white">
                       ₹{bills.find(b => b.id === selectedBill)?.amount.toFixed(2)}
                     </span>
                   </div>
@@ -411,14 +454,14 @@ export default function PaymentsPage() {
                 <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
                   <Button 
                     variant="outline" 
-                    className="rounded-xl flex-1"
+                    className="rounded-xl flex-1 text-xs font-semibold cursor-pointer"
                     onClick={() => setPaymentStep('choose_method')}
                     disabled={isProcessing}
                   >
                     Back
                   </Button>
                   <Button 
-                    className="rounded-xl bg-primary font-bold flex-1"
+                    className="rounded-xl bg-primary hover:bg-primary/95 glow-primary font-bold flex-1 text-xs cursor-pointer"
                     onClick={handleProcessPayment}
                     disabled={isProcessing}
                   >
@@ -436,20 +479,20 @@ export default function PaymentsPage() {
             {paymentStep === 'upi_apps' && (
               <motion.div
                 key="upi_apps"
-                initial={{ opacity: 0, x: 10 }}
+                initial={{ opacity: 0, x: 15 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
+                exit={{ opacity: 0, x: -15 }}
+                transition={{ type: "spring" as const, stiffness: 350, damping: 28 }}
                 className="flex flex-col gap-4"
               >
                 <DialogHeader className="flex flex-row items-center gap-2 relative">
                   <button 
                     onClick={() => setPaymentStep('choose_method')}
-                    className="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center text-slate-500 absolute -left-2 top-0"
+                    className="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center text-slate-500 absolute -left-2 top-0 cursor-pointer"
                   >
                     <ArrowLeft className="size-4" />
                   </button>
-                  <DialogTitle className="text-xl font-extrabold text-slate-900 dark:text-white pl-8 font-sans">Select UPI App</DialogTitle>
+                  <DialogTitle className="text-xl font-extrabold text-slate-900 dark:text-white pl-8">Select UPI App</DialogTitle>
                 </DialogHeader>
 
                 <DialogDescription className="text-xs text-slate-500">
@@ -457,14 +500,14 @@ export default function PaymentsPage() {
                 </DialogDescription>
 
                 {/* Owner info callout */}
-                <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 flex flex-col gap-1.5 text-[11px]">
+                <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-850 rounded-2xl p-3.5 flex flex-col gap-1.5 text-[10px]">
                   <div className="flex justify-between">
                     <span className="font-bold text-slate-500">To Owner:</span>
-                    <span className="font-extrabold text-slate-800 dark:text-slate-200">{tenant.pgUpiName || tenant.pgUpiRegisteredName || tenant.pgName || "PG Owner"}</span>
+                    <span className="font-extrabold text-slate-800 dark:text-slate-205">{tenant.pgUpiName || tenant.pgUpiRegisteredName || tenant.pgName || "PG Owner"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="font-bold text-slate-500">UPI ID / Phone:</span>
-                    <span className="font-extrabold text-slate-800 dark:text-slate-200 font-mono">{tenant.pgUpiId || tenant.pgUpiNumber || "pgowner@upi"}</span>
+                    <span className="font-extrabold text-slate-800 dark:text-slate-205 font-mono">{tenant.pgUpiId || tenant.pgUpiNumber || "pgowner@upi"}</span>
                   </div>
                 </div>
 
@@ -472,67 +515,62 @@ export default function PaymentsPage() {
                   {/* Google Pay */}
                   <button
                     onClick={() => handleLaunchUpi('gpay')}
-                    className="flex flex-col items-center justify-center gap-2 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-850 hover:bg-slate-50 dark:hover:bg-slate-900 active:scale-[0.97] transition-all text-center cursor-pointer"
+                    className="flex flex-col items-center justify-center gap-2.5 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 hover:bg-slate-50 dark:hover:bg-slate-900 active:scale-[0.97] transition-all text-center cursor-pointer"
                   >
-                    <div className="size-11 rounded-full bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 shadow-xs">
-                      {/* Stylized Google Pay SVG */}
-                      <svg viewBox="0 0 24 24" className="size-6 shrink-0 fill-current">
+                    <div className="size-11 rounded-full bg-blue-50 dark:bg-blue-950/40 flex items-center justify-center text-blue-600 shadow-xs border border-blue-100/20">
+                      <svg viewBox="0 0 24 24" className="size-5 shrink-0 fill-current">
                         <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7.5v-6H9v6zm4 0h-1.5v-2.5h-2V13h2v-2H13v6zm4.5-4.5h-2v2h2V16h-2v1H15v-6h3.5v1.5z" />
                       </svg>
                     </div>
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-350">Google Pay</span>
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Google Pay</span>
                   </button>
 
                   {/* PhonePe */}
                   <button
                     onClick={() => handleLaunchUpi('phonepe')}
-                    className="flex flex-col items-center justify-center gap-2 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-850 hover:bg-slate-50 dark:hover:bg-slate-900 active:scale-[0.97] transition-all text-center cursor-pointer"
+                    className="flex flex-col items-center justify-center gap-2.5 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 hover:bg-slate-50 dark:hover:bg-slate-900 active:scale-[0.97] transition-all text-center cursor-pointer"
                   >
-                    <div className="size-11 rounded-full bg-purple-50 dark:bg-purple-950/40 flex items-center justify-center text-purple-600 shadow-xs">
-                      {/* Stylized PhonePe SVG */}
-                      <svg viewBox="0 0 24 24" className="size-6 shrink-0 fill-current">
+                    <div className="size-11 rounded-full bg-purple-50 dark:bg-purple-950/40 flex items-center justify-center text-purple-650 shadow-xs border border-purple-100/20">
+                      <svg viewBox="0 0 24 24" className="size-5 shrink-0 fill-current">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 9.9 13 10.5 13 12h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z" />
                       </svg>
                     </div>
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-350">PhonePe</span>
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">PhonePe</span>
                   </button>
 
                   {/* Paytm */}
                   <button
                     onClick={() => handleLaunchUpi('paytm')}
-                    className="flex flex-col items-center justify-center gap-2 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-850 hover:bg-slate-50 dark:hover:bg-slate-900 active:scale-[0.97] transition-all text-center cursor-pointer"
+                    className="flex flex-col items-center justify-center gap-2.5 p-4 rounded-2xl border border-slate-100 dark:border-slate-855 hover:bg-slate-50 dark:hover:bg-slate-900 active:scale-[0.97] transition-all text-center cursor-pointer"
                   >
-                    <div className="size-11 rounded-full bg-sky-50 dark:bg-sky-950/40 flex items-center justify-center text-sky-500 shadow-xs">
-                      {/* Stylized Paytm SVG */}
-                      <svg viewBox="0 0 24 24" className="size-6 shrink-0 fill-current">
+                    <div className="size-11 rounded-full bg-sky-50 dark:bg-sky-950/40 flex items-center justify-center text-sky-500 shadow-xs border border-sky-100/20">
+                      <svg viewBox="0 0 24 24" className="size-5 shrink-0 fill-current">
                         <path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 16H7v-2h10v2zm-2-4H9v-2h6v2zm2-4H7V8h10v2z" />
                       </svg>
                     </div>
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-350">Paytm</span>
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Paytm</span>
                   </button>
 
-                  {/* BHIM UPI */}
+                  {/* BHIM */}
                   <button
                     onClick={() => handleLaunchUpi('bhim')}
-                    className="flex flex-col items-center justify-center gap-2 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-850 hover:bg-slate-50 dark:hover:bg-slate-900 active:scale-[0.97] transition-all text-center cursor-pointer"
+                    className="flex flex-col items-center justify-center gap-2.5 p-4 rounded-2xl border border-slate-100 dark:border-slate-855 hover:bg-slate-50 dark:hover:bg-slate-900 active:scale-[0.97] transition-all text-center cursor-pointer"
                   >
-                    <div className="size-11 rounded-full bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 shadow-xs">
-                      {/* Stylized BHIM SVG */}
-                      <svg viewBox="0 0 24 24" className="size-6 shrink-0 fill-current">
+                    <div className="size-11 rounded-full bg-emerald-50 dark:bg-emerald-950/40 flex items-center justify-center text-emerald-600 shadow-xs border border-emerald-100/20">
+                      <svg viewBox="0 0 24 24" className="size-5 shrink-0 fill-current">
                         <path d="M12 2L2 22h20L12 2zm0 5l6 12H6l6-12z" />
                       </svg>
                     </div>
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-350">BHIM UPI</span>
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">BHIM UPI</span>
                   </button>
                 </div>
 
-                {/* Generic OS Chooser Button */}
                 <button
                   onClick={() => handleLaunchUpi('generic')}
-                  className="w-full py-3.5 rounded-2xl border border-slate-200 dark:border-slate-850 text-slate-700 dark:text-slate-300 font-extrabold text-xs flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors cursor-pointer"
+                  className="w-full py-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors cursor-pointer"
                 >
                   <Smartphone className="size-4" />
-                  Show All Installed UPI Apps
+                  Show All Installed Apps
                 </button>
               </motion.div>
             )}
@@ -540,41 +578,40 @@ export default function PaymentsPage() {
             {paymentStep === 'upi_qr' && (
               <motion.div
                 key="upi_qr"
-                initial={{ opacity: 0, x: 10 }}
+                initial={{ opacity: 0, x: 15 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
+                exit={{ opacity: 0, x: -15 }}
+                transition={{ type: "spring" as const, stiffness: 350, damping: 28 }}
                 className="flex flex-col items-center gap-4 text-center"
               >
                 <DialogHeader className="w-full flex flex-row items-center gap-2 relative">
                   <button 
                     onClick={() => setPaymentStep('choose_method')}
-                    className="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center text-slate-500 absolute -left-2 top-0"
+                    className="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center text-slate-500 absolute -left-2 top-0 cursor-pointer"
                   >
                     <ArrowLeft className="size-4" />
                   </button>
-                  <DialogTitle className="text-xl font-extrabold text-slate-900 dark:text-white pl-8 font-sans w-full text-center pr-8">Scan QR Code</DialogTitle>
+                  <DialogTitle className="text-xl font-extrabold text-slate-900 dark:text-white pl-8 w-full text-center pr-8">Scan QR Code</DialogTitle>
                 </DialogHeader>
 
-                <DialogDescription className="text-xs text-slate-505 px-2">
-                  Open GPay, PhonePe, Paytm, or BHIM on your mobile phone and scan this QR code to pay.
+                <DialogDescription className="text-xs text-slate-500 px-2 leading-relaxed">
+                  Scan this QR code with any UPI app on your mobile phone to complete payment.
                 </DialogDescription>
 
                 {selectedBill && (
                   <div className="flex flex-col items-center gap-4 w-full">
                     {/* QR Code Container */}
-                    <div className="bg-white p-4 rounded-3xl border-2 border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative">
-                      {/* Public QR Code API */}
+                    <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-[0_12px_40px_rgba(0,0,0,0.06)] relative">
                       <img 
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(getUpiUrl('generic', bills.find(b => b.id === selectedBill)))}`} 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=${encodeURIComponent(getUpiUrl('generic', bills.find(b => b.id === selectedBill)))}`} 
                         alt="UPI Payment QR Code"
-                        className="size-[200px] select-none"
+                        className="size-[180px] select-none"
                       />
                       <div className="absolute inset-0 border border-primary/20 rounded-3xl pointer-events-none" />
                     </div>
 
                     {/* Payee Info */}
-                    <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-4 w-full text-left flex flex-col gap-1.5 text-xs">
+                    <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-850 rounded-2xl p-4 w-full text-left flex flex-col gap-1.5 text-xs">
                       <div className="flex justify-between">
                         <span className="font-bold text-slate-500">Payee (Owner):</span>
                         <span className="font-extrabold text-slate-800 dark:text-slate-200">{tenant.pgUpiName || tenant.pgUpiRegisteredName || tenant.pgName || "PG Owner"}</span>
@@ -583,9 +620,9 @@ export default function PaymentsPage() {
                         <span className="font-bold text-slate-500">UPI ID:</span>
                         <span className="font-extrabold text-slate-800 dark:text-slate-200 font-mono">{tenant.pgUpiId || tenant.pgUpiNumber || "pgowner@upi"}</span>
                       </div>
-                      <div className="flex justify-between border-t border-slate-200/50 dark:border-slate-800 pt-1.5 mt-1">
-                        <span className="font-bold text-slate-500">Amount Due:</span>
-                        <span className="font-extrabold text-lg text-primary">
+                      <div className="flex justify-between border-t border-slate-100 dark:border-slate-850 pt-2 mt-2">
+                        <span className="font-bold text-slate-505">Amount Due:</span>
+                        <span className="font-black text-lg text-primary">
                           ₹{bills.find(b => b.id === selectedBill)?.amount.toFixed(2)}
                         </span>
                       </div>
@@ -596,13 +633,13 @@ export default function PaymentsPage() {
                 <DialogFooter className="w-full flex flex-col sm:flex-row gap-2 mt-2">
                   <Button 
                     variant="outline" 
-                    className="rounded-xl flex-1"
+                    className="rounded-xl flex-1 text-xs font-semibold cursor-pointer"
                     onClick={() => setPaymentStep('choose_method')}
                   >
                     Cancel
                   </Button>
                   <Button 
-                    className="rounded-xl bg-primary font-bold flex-1"
+                    className="rounded-xl bg-primary hover:bg-primary/95 glow-primary font-bold flex-1 text-xs cursor-pointer"
                     onClick={() => setPaymentStep('confirm_status')}
                   >
                     I Have Paid
@@ -617,23 +654,23 @@ export default function PaymentsPage() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
+                transition={{ type: "spring" as const, stiffness: 350, damping: 28 }}
                 className="flex flex-col items-center gap-4 text-center py-4"
               >
-                <div className="size-16 rounded-full bg-amber-50 dark:bg-amber-950/20 text-amber-500 flex items-center justify-center animate-bounce mb-2">
+                <div className="size-16 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center animate-bounce mb-2 border border-amber-500/20 shadow-inner">
                   <AlertCircle className="size-8" />
                 </div>
 
                 <DialogHeader>
                   <DialogTitle className="text-xl font-extrabold text-slate-900 dark:text-white">Verify Payment</DialogTitle>
-                  <DialogDescription className="text-xs text-slate-500 mt-1.5">
-                    Did you complete the payment of <span className="font-extrabold text-slate-800 dark:text-slate-100">₹{bills.find(b => b.id === selectedBill)?.amount.toFixed(2)}</span> in your UPI App?
+                  <DialogDescription className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                    Did you complete the payment of <span className="font-black text-slate-900 dark:text-white">₹{bills.find(b => b.id === selectedBill)?.amount.toFixed(2)}</span> inside your UPI app?
                   </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex flex-col gap-2 w-full mt-4">
+                <div className="flex flex-col gap-2.5 w-full mt-4">
                   <Button 
-                    className="rounded-xl bg-primary font-bold w-full h-12"
+                    className="rounded-xl bg-primary hover:bg-primary/95 glow-primary font-bold w-full h-12 text-xs cursor-pointer"
                     onClick={handleConfirmUpiPaid}
                     disabled={isProcessing}
                   >
@@ -652,7 +689,7 @@ export default function PaymentsPage() {
                   
                   <Button 
                     variant="outline" 
-                    className="rounded-xl w-full h-12"
+                    className="rounded-xl w-full h-12 text-xs font-semibold cursor-pointer"
                     onClick={() => {
                       if (isMobile) {
                         setPaymentStep('upi_apps');
@@ -670,6 +707,6 @@ export default function PaymentsPage() {
           </AnimatePresence>
         </DialogContent>
       </Dialog>
-    </div>
+    </motion.div>
   );
 }
