@@ -40,6 +40,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Skip Next.js internal assets and RSC route data to prevent navigation reloads
+  const url = new URL(event.request.url);
+  if (url.pathname.startsWith('/_next/') || url.searchParams.has('_rsc')) {
+    return;
+  }
+
   // Skip caching for HTML / navigation requests to prevent stale session pages
   if (
     event.request.mode === 'navigate' ||

@@ -99,6 +99,30 @@ export interface AppNotification {
   read: boolean;
 }
 
+export interface CommunityComment {
+  id: string;
+  author: string;
+  avatar: string;
+  text: string;
+  time: string;
+}
+
+export interface CommunityFeedPost {
+  id: string;
+  author: string;
+  room: string;
+  avatar: string;
+  time: string;
+  category: 'Marketplace' | 'Discussion';
+  type: 'Selling' | 'Discussion';
+  title: string;
+  content: string;
+  image?: string;
+  likes: number;
+  comments: CommunityComment[];
+  likedByMe?: boolean;
+}
+
 interface AppContextType {
   tenant: TenantInfo;
   bills: Bill[];
@@ -127,6 +151,11 @@ interface AppContextType {
   login: (emailOrPhone: string, password?: string) => Promise<{ error: string | null }>;
   logout: () => void;
   register: (name: string, email: string, phone: string, password?: string, role?: string, pgId?: string, additionalDetails?: Record<string, any>) => Promise<{ error: string | null }>;
+  communityFeed: CommunityFeedPost[];
+  addCommunityPost: (title: string, content: string, category: 'Marketplace' | 'Discussion', imageUrl?: string) => Promise<void>;
+  likeCommunityPost: (postId: string) => Promise<void>;
+  addCommunityComment: (postId: string, text: string) => Promise<void>;
+  authLoading: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -135,9 +164,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   console.log("AppProvider render called, window:", typeof window !== 'undefined');
   // Authentication State
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
   const [userRole, setUserRole] = useState<'Tenant' | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [pgId, setPgId] = useState<number | null>(null);
+  const [communityFeed, setCommunityFeed] = useState<CommunityFeedPost[]>([]);
 
 
   // 1. Tenant Info
@@ -449,6 +480,101 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               raisedDate: new Date(c.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })
             })));
           }
+
+          // 6. Fetch Community Posts
+          const { data: dbPosts } = await supabase
+            .from('community_posts')
+            .select(`
+              id,
+              created_at,
+              title,
+              content,
+              category,
+              type,
+              image_url,
+              user_id,
+              users (
+                name,
+                photo
+              )
+            `)
+            .eq('pg_id', userProfile.pg_id)
+            .order('created_at', { ascending: false });
+
+          const { data: dbComments } = await supabase
+            .from('community_comments')
+            .select(`
+              id,
+              created_at,
+              post_id,
+              text,
+              users (
+                name,
+                photo
+              )
+            `);
+
+          const { data: dbLikes } = await supabase
+            .from('community_likes')
+            .select('*');
+
+          // Fetch rooms & tenants mappings for post authors
+          const { data: dbTenantsRoom } = await supabase
+            .from('tenants')
+            .select('user_id, rooms(room_number)');
+
+          const tenantRoomMap: Record<string, string> = {};
+          if (dbTenantsRoom) {
+            dbTenantsRoom.forEach(t => {
+              if (t.user_id && t.rooms) {
+                const roomData: any = t.rooms;
+                const roomNumber = Array.isArray(roomData) ? roomData[0]?.room_number : roomData?.room_number;
+                tenantRoomMap[t.user_id] = roomNumber ? `Room ${roomNumber}` : 'Room N/A';
+              }
+            });
+          }
+
+          if (dbPosts) {
+            const postsMapped = dbPosts.map((p: any) => {
+              const authorUser = p.users;
+              const authorName = authorUser ? authorUser.name : 'Unknown';
+              const authorRoom = p.user_id ? (tenantRoomMap[p.user_id] || 'Room N/A') : 'Room N/A';
+              const authorAvatar = authorUser ? (authorUser.photo || '') : '';
+              
+              const postLikes = dbLikes ? dbLikes.filter(l => l.post_id === p.id) : [];
+              const likesCount = postLikes.length;
+              const likedByMe = dbLikes ? dbLikes.some(l => l.post_id === p.id && l.user_id === uid) : false;
+
+              const postComments = dbComments 
+                ? dbComments
+                    .filter(c => c.post_id === p.id)
+                    .map((c: any) => ({
+                      id: c.id.toString(),
+                      author: c.users ? c.users.name : 'Unknown',
+                      avatar: c.users ? (c.users.photo || '') : '',
+                      text: c.text,
+                      time: new Date(c.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })
+                    }))
+                : [];
+
+              return {
+                id: p.id.toString(),
+                author: authorName,
+                room: authorRoom,
+                avatar: authorAvatar,
+                time: new Date(p.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+                category: p.category as 'Marketplace' | 'Discussion',
+                type: p.type as 'Selling' | 'Discussion',
+                title: p.title,
+                content: p.content,
+                image: p.image_url || undefined,
+                likes: likesCount,
+                comments: postComments,
+                likedByMe: likedByMe
+              };
+            });
+            setCommunityFeed(postsMapped);
+          }
         }
       }
     } catch (err) {
@@ -463,6 +589,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let subscription: any = null;
 
     const setupAuth = async () => {
+      let isInitial = true;
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         if (error) {
@@ -472,7 +599,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (session?.user) {
           setIsLoggedIn(true);
           setUserId(session.user.id);
-          fetchData(session.user.id, session.user.email || '');
+          await fetchData(session.user.id, session.user.email || '');
 
           // Setup real-time subscription for instant syncing
           sub = supabase
@@ -519,19 +646,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       } catch (err) {
         console.error("Error setting up auth session:", err);
+      } finally {
+        setAuthLoading(false);
       }
 
       // Listen to auth changes
-      const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      const { data } = supabase.auth.onAuthStateChange(async (event, session) => {
         console.log("Supabase Auth State Event:", event);
+        if (isInitial) {
+          return;
+        }
         if (session?.user) {
           setIsLoggedIn(true);
           setUserId(session.user.id);
-          fetchData(session.user.id, session.user.email || '');
+          await fetchData(session.user.id, session.user.email || '');
+          setAuthLoading(false);
         } else if (event === 'SIGNED_OUT') {
           setIsLoggedIn(false);
           setUserId(null);
           setUserRole(null);
+          setAuthLoading(false);
           if (sub) {
             supabase.removeChannel(sub);
           }
@@ -541,6 +675,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       });
       subscription = data.subscription;
+      isInitial = false;
     };
 
     setupAuth();
@@ -819,9 +954,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }));
 
       return { error: null };
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error updating profile:', err);
-      return { error: err.message || "Failed to update profile" };
+      const msg = err instanceof Error ? err.message : 'An error occurred.';
+      return { error: msg };
+    }
+  };
+
+  const addCommunityPost = async (title: string, content: string, category: 'Marketplace' | 'Discussion', imageUrl?: string) => {
+    if (!userId || !pgId) return;
+    try {
+      const { error } = await supabase
+        .from('community_posts')
+        .insert({
+          user_id: userId,
+          pg_id: pgId,
+          title,
+          content,
+          category,
+          type: category === 'Marketplace' ? 'Selling' : 'Discussion',
+          image_url: imageUrl || null
+        });
+      if (error) throw error;
+      await fetchData(userId, tenant.email);
+    } catch (err) {
+      console.error('Error adding community post:', err);
+    }
+  };
+
+  const likeCommunityPost = async (postId: string) => {
+    if (!userId) return;
+    const numericPostId = parseInt(postId);
+    try {
+      const { data: existingLike } = await supabase
+        .from('community_likes')
+        .select('*')
+        .eq('post_id', numericPostId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (existingLike) {
+        const { error } = await supabase
+          .from('community_likes')
+          .delete()
+          .eq('id', existingLike.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('community_likes')
+          .insert({
+            post_id: numericPostId,
+            user_id: userId
+          });
+        if (error) throw error;
+      }
+      await fetchData(userId, tenant.email);
+    } catch (err) {
+      console.error('Error liking community post:', err);
+    }
+  };
+
+  const addCommunityComment = async (postId: string, text: string) => {
+    if (!userId) return;
+    try {
+      const { error } = await supabase
+        .from('community_comments')
+        .insert({
+          post_id: parseInt(postId),
+          user_id: userId,
+          text
+        });
+      if (error) throw error;
+      await fetchData(userId, tenant.email);
+    } catch (err) {
+      console.error('Error adding community comment:', err);
     }
   };
 
@@ -848,7 +1054,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       userRole,
       login,
       logout,
-      register
+      register,
+      communityFeed,
+      addCommunityPost,
+      likeCommunityPost,
+      addCommunityComment,
+      authLoading
     }}>
       {children}
     </AppContext.Provider>

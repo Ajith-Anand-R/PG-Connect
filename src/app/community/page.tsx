@@ -78,7 +78,15 @@ interface FeedPost {
 }
 
 export default function CommunityPage() {
-  const { notices, tenant } = useApp();
+  const { 
+    notices, 
+    tenant, 
+    communityFeed, 
+    addCommunityPost, 
+    likeCommunityPost, 
+    addCommunityComment 
+  } = useApp();
+  
   const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
   const [activeFeedTab, setActiveFeedTab] = useState<'all' | 'marketplace' | 'discussion'>('all');
   const [isNewPostOpen, setIsNewPostOpen] = useState(false);
@@ -92,108 +100,15 @@ export default function CommunityPage() {
   // Comments inputs mapping (post.id -> string)
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
 
-  // Seed with rich default community posts so it looks premium and alive
-  const [feed, setFeed] = useState<FeedPost[]>([
-    {
-      id: "post-1",
-      author: "Rahul Sharma",
-      room: "Room 102",
-      avatar: "",
-      time: "2 hours ago",
-      category: "Marketplace",
-      type: "Selling",
-      title: "Ergonomic Office Chair - Like New",
-      content: "Selling my office chair. Adjustable armrests, lumbar support, and high-density foam seat. Used for 3 months, selling because I am relocating. Price is ₹2,500 (negotiable). DM if interested!",
-      likes: 8,
-      comments: [
-        {
-          id: "c-1",
-          author: "Amit Verma",
-          avatar: "",
-          text: "Is it still available? I can check it out tonight.",
-          time: "1 hour ago"
-        },
-        {
-          id: "c-2",
-          author: "Rahul Sharma",
-          avatar: "",
-          text: "Yes, Amit! Drop by Room 102 anytime after 7 PM.",
-          time: "45 mins ago"
-        }
-      ]
-    },
-    {
-      id: "post-2",
-      author: "Sneha Reddy",
-      room: "Room 204",
-      avatar: "",
-      time: "5 hours ago",
-      category: "Discussion",
-      type: "Discussion",
-      title: "Cab sharing to Airport - Friday morning?",
-      content: "Is anyone planning to take a cab to Bengaluru Airport on Friday morning around 5:30 AM? Hoping to pool and split the fare. Let me know if you want to join!",
-      likes: 12,
-      comments: [
-        {
-          id: "c-3",
-          author: "Pooja Hegde",
-          avatar: "",
-          text: "Hey! I have a flight at 9 AM, so 5:30 AM is perfect. Add me in!",
-          time: "3 hours ago"
-        }
-      ]
-    },
-    {
-      id: "post-3",
-      author: "Karan Malhotra",
-      room: "Room 305",
-      avatar: "",
-      time: "1 day ago",
-      category: "Discussion",
-      type: "Discussion",
-      title: "Lost gym bottle in block B lounge",
-      content: "Hey guys, I think I left my black steel Decathlon water bottle in the Block B 3rd floor lounge yesterday evening. It has a red cap. If anyone found it, please ping me. Thanks!",
-      likes: 4,
-      comments: []
-    }
-  ]);
-
   const handleLike = (postId: string) => {
-    setFeed(prev => prev.map(post => {
-      if (post.id === postId) {
-        return {
-          ...post,
-          likes: post.likedByMe ? post.likes - 1 : post.likes + 1,
-          likedByMe: !post.likedByMe
-        };
-      }
-      return post;
-    }));
+    likeCommunityPost(postId);
   };
 
   const handleAddComment = (postId: string) => {
     const text = commentInputs[postId];
     if (!text || !text.trim()) return;
 
-    setFeed(prev => prev.map(post => {
-      if (post.id === postId) {
-        return {
-          ...post,
-          comments: [
-            ...post.comments,
-            {
-              id: `c-${Date.now()}`,
-              author: tenant.name,
-              avatar: '', // local avatar placeholder
-              text: text.trim(),
-              time: 'Just now'
-            }
-          ]
-        };
-      }
-      return post;
-    }));
-
+    addCommunityComment(postId, text.trim());
     setCommentInputs(prev => ({ ...prev, [postId]: '' }));
   };
 
@@ -201,22 +116,7 @@ export default function CommunityPage() {
     e.preventDefault();
     if (!postTitle.trim() || !postContent.trim()) return;
 
-    const newPost: FeedPost = {
-      id: `post-${Date.now()}`,
-      author: tenant.name,
-      room: tenant.room,
-      avatar: '',
-      time: 'Just now',
-      category: postCategory,
-      type: postCategory === 'Marketplace' ? 'Selling' : 'Discussion',
-      title: postTitle.trim(),
-      content: postContent.trim(),
-      image: postImage || undefined,
-      likes: 0,
-      comments: []
-    };
-
-    setFeed(prev => [newPost, ...prev]);
+    addCommunityPost(postTitle.trim(), postContent.trim(), postCategory, postImage || undefined);
 
     // Reset Form
     setPostTitle('');
@@ -237,7 +137,7 @@ export default function CommunityPage() {
     }
   };
 
-  const filteredFeed = feed.filter(post => {
+  const filteredFeed = communityFeed.filter(post => {
     if (activeFeedTab === 'all') return true;
     return post.category.toLowerCase() === activeFeedTab;
   });
@@ -360,131 +260,146 @@ export default function CommunityPage() {
 
           <div className="flex flex-col gap-4">
             <AnimatePresence mode="popLayout">
-              {filteredFeed.map((post) => {
-                const hasImage = !!post.image;
-                
-                return (
-                  <motion.div 
-                    key={post.id}
-                    layout
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="glass-card rounded-3xl border-transparent shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden"
-                  >
-                    <CardContent className="p-5 flex flex-col gap-4">
-                      {/* Post Author Info */}
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-2xl overflow-hidden bg-gradient-to-tr from-primary to-accent text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
-                            {post.avatar ? (
-                              <img src={post.avatar} alt={post.author} className="w-full h-full object-cover" />
-                            ) : (
-                              post.author.split(' ').map(n => n[0]).join('')
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-slate-900 dark:text-white">{post.author}</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5 font-medium">{post.room} • {post.time}</p>
-                          </div>
-                        </div>
-
-                        <Badge className={`${
-                          post.category === 'Marketplace' 
-                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' 
-                            : 'bg-primary/10 text-primary dark:text-primary border-primary/20'
-                        } border text-[9px] font-bold py-0.5 px-2 rounded-md flex items-center gap-1`}>
-                          {post.category === 'Marketplace' && <ShoppingBag className="size-3" />}
-                          {post.type}
-                        </Badge>
-                      </div>
-
-                      {/* Post Content */}
-                      <div className="flex flex-col gap-1.5">
-                        <h4 className="font-extrabold text-slate-900 dark:text-white text-base leading-snug">{post.title}</h4>
-                        <p className="text-xs text-slate-650 dark:text-slate-350 leading-relaxed font-normal">
-                          {post.content}
-                        </p>
-                      </div>
-
-                      {/* Post Image Attachment */}
-                      {hasImage && (
-                        <div className="w-full h-52 rounded-2xl overflow-hidden mt-1 border border-slate-100 dark:border-slate-800 shadow-inner">
-                          <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
-                        </div>
-                      )}
-
-                      {/* Likes & Comments Summary */}
-                      <div className="flex items-center gap-5 pt-3.5 border-t border-slate-100/60 dark:border-slate-800/60 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                        <button 
-                          onClick={() => handleLike(post.id)}
-                          className={`flex items-center gap-1.5 transition-all active:scale-90 ${
-                            post.likedByMe ? 'text-rose-500 font-bold' : 'hover:text-rose-500'
-                          }`}
-                        >
-                          <Heart className={`size-4.5 ${post.likedByMe ? 'fill-rose-500 text-rose-500' : ''}`} />
-                          <span>{post.likes} Likes</span>
-                        </button>
-                        <div className="flex items-center gap-1.5">
-                          <MessageSquare className="size-4.5" />
-                          <span>{post.comments.length} Comments</span>
-                        </div>
-                      </div>
-
-                      {/* Comments List */}
-                      {post.comments.length > 0 && (
-                        <div className="bg-slate-50/70 dark:bg-slate-900/30 p-3.5 rounded-2xl flex flex-col gap-3 mt-1.5 border border-slate-100/40 dark:border-slate-800/40">
-                          {post.comments.map((comment) => (
-                            <div key={comment.id} className="flex gap-2.5 items-start">
-                              <div className="w-6.5 h-6.5 rounded-xl overflow-hidden bg-gradient-to-tr from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900 text-slate-700 dark:text-slate-300 flex items-center justify-center font-bold text-[9px] shrink-0">
-                                {comment.avatar ? (
-                                  <img src={comment.avatar} alt={comment.author} className="w-full h-full object-cover" />
-                                ) : (
-                                  comment.author.split(' ').map(n => n[0]).join('')
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-[10px] font-bold text-slate-900 dark:text-white">
-                                  {comment.author}
-                                  <span className="font-normal text-slate-400 ml-1.5">{comment.time}</span>
-                                </p>
-                                <p className="text-xs text-slate-650 dark:text-slate-350 mt-0.5 leading-relaxed font-normal">
-                                  {comment.text}
-                                </p>
-                              </div>
+              {filteredFeed.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  className="glass-card rounded-[24px] p-8 flex flex-col items-center justify-center text-center border-dashed border-2 border-slate-200/40 dark:border-slate-800/40 w-full"
+                >
+                  <MessageSquare className="size-10 text-primary/40 dark:text-primary/30 mb-3 animate-pulse" />
+                  <h3 className="font-extrabold text-sm text-slate-800 dark:text-slate-200">No posts in feed</h3>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 max-w-xs leading-relaxed">
+                    Be the first to share updates, ask questions, or list items for sale!
+                  </p>
+                </motion.div>
+              ) : (
+                filteredFeed.map((post) => {
+                  const hasImage = !!post.image;
+                  
+                  return (
+                    <motion.div 
+                      key={post.id}
+                      layout
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="glass-card rounded-3xl border-transparent shadow-[0_8px_30px_rgb(0,0,0,0.02)] overflow-hidden"
+                    >
+                      <CardContent className="p-5 flex flex-col gap-4">
+                        {/* Post Author Info */}
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-2xl overflow-hidden bg-gradient-to-tr from-primary to-accent text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-sm">
+                              {post.avatar ? (
+                                <img src={post.avatar} alt={post.author} className="w-full h-full object-cover" />
+                              ) : (
+                                post.author.split(' ').map(n => n[0]).join('')
+                              )}
                             </div>
-                          ))}
+                            <div>
+                              <p className="text-xs font-bold text-slate-900 dark:text-white">{post.author}</p>
+                              <p className="text-[10px] text-slate-400 mt-0.5 font-medium">{post.room} • {post.time}</p>
+                            </div>
+                          </div>
+  
+                          <Badge className={`${
+                            post.category === 'Marketplace' 
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' 
+                              : 'bg-primary/10 text-primary dark:text-primary border-primary/20'
+                          } border text-[9px] font-bold py-0.5 px-2 rounded-md flex items-center gap-1`}>
+                            {post.category === 'Marketplace' && <ShoppingBag className="size-3" />}
+                            {post.type}
+                          </Badge>
                         </div>
-                      )}
-
-                      {/* Add Comment Input */}
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <div className="w-8 h-8 rounded-xl overflow-hidden bg-gradient-to-tr from-primary/20 to-primary/30 text-primary dark:text-primary-foreground flex-shrink-0 flex items-center justify-center font-extrabold text-[10px] border border-primary/10">
-                          {tenant.name.split(' ').map(n => n[0]).join('')}
+  
+                        {/* Post Content */}
+                        <div className="flex flex-col gap-1.5">
+                          <h4 className="font-extrabold text-slate-900 dark:text-white text-base leading-snug">{post.title}</h4>
+                          <p className="text-xs text-slate-650 dark:text-slate-350 leading-relaxed font-normal">
+                            {post.content}
+                          </p>
                         </div>
-                        <div className="flex-1 relative flex items-center">
-                          <Input 
-                            placeholder="Write a comment..." 
-                            value={commentInputs[post.id] || ''}
-                            onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleAddComment(post.id);
-                            }}
-                            className="w-full rounded-full pl-4.5 pr-11 text-xs h-9 bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/50 focus-visible:ring-primary/20"
-                          />
+  
+                        {/* Post Image Attachment */}
+                        {hasImage && (
+                          <div className="w-full h-52 rounded-2xl overflow-hidden mt-1 border border-slate-100 dark:border-slate-800 shadow-inner">
+                            <img src={post.image} alt={post.title} className="w-full h-full object-cover" />
+                          </div>
+                        )}
+  
+                        {/* Likes & Comments Summary */}
+                        <div className="flex items-center gap-5 pt-3.5 border-t border-slate-100/60 dark:border-slate-800/60 text-xs font-semibold text-slate-500 dark:text-slate-400">
                           <button 
-                            onClick={() => handleAddComment(post.id)}
-                            className="absolute right-2.5 text-primary hover:text-primary-container p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            onClick={() => handleLike(post.id)}
+                            className={`flex items-center gap-1.5 transition-all active:scale-90 ${
+                              post.likedByMe ? 'text-rose-500 font-bold' : 'hover:text-rose-500'
+                            }`}
                           >
-                            <Send className="size-4" />
+                            <Heart className={`size-4.5 ${post.likedByMe ? 'fill-rose-500 text-rose-500' : ''}`} />
+                            <span>{post.likes} Likes</span>
                           </button>
+                          <div className="flex items-center gap-1.5">
+                            <MessageSquare className="size-4.5" />
+                            <span>{post.comments.length} Comments</span>
+                          </div>
                         </div>
-                      </div>
-
-                    </CardContent>
-                  </motion.div>
-                );
-              })}
+  
+                        {/* Comments List */}
+                        {post.comments.length > 0 && (
+                          <div className="bg-slate-50/70 dark:bg-slate-900/30 p-3.5 rounded-2xl flex flex-col gap-3 mt-1.5 border border-slate-100/40 dark:border-slate-800/40">
+                            {post.comments.map((comment) => (
+                              <div key={comment.id} className="flex gap-2.5 items-start">
+                                <div className="w-6.5 h-6.5 rounded-xl overflow-hidden bg-gradient-to-tr from-slate-200 to-slate-300 dark:from-slate-800 dark:to-slate-900 text-slate-700 dark:text-slate-300 flex items-center justify-center font-bold text-[9px] shrink-0">
+                                  {comment.avatar ? (
+                                    <img src={comment.avatar} alt={comment.author} className="w-full h-full object-cover" />
+                                  ) : (
+                                    comment.author.split(' ').map(n => n[0]).join('')
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-[10px] font-bold text-slate-900 dark:text-white">
+                                    {comment.author}
+                                    <span className="font-normal text-slate-400 ml-1.5">{comment.time}</span>
+                                  </p>
+                                  <p className="text-xs text-slate-650 dark:text-slate-350 mt-0.5 leading-relaxed font-normal">
+                                    {comment.text}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+  
+                        {/* Add Comment Input */}
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <div className="w-8 h-8 rounded-xl overflow-hidden bg-gradient-to-tr from-primary/20 to-primary/30 text-primary dark:text-primary-foreground flex-shrink-0 flex items-center justify-center font-extrabold text-[10px] border border-primary/10">
+                            {tenant.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <div className="flex-1 relative flex items-center">
+                            <Input 
+                              placeholder="Write a comment..." 
+                              value={commentInputs[post.id] || ''}
+                              onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleAddComment(post.id);
+                              }}
+                              className="w-full rounded-full pl-4.5 pr-11 text-xs h-9 bg-slate-50/70 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/50 focus-visible:ring-primary/20"
+                            />
+                            <button 
+                              onClick={() => handleAddComment(post.id)}
+                              className="absolute right-2.5 text-primary hover:text-primary-container p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            >
+                              <Send className="size-4" />
+                            </button>
+                          </div>
+                        </div>
+  
+                      </CardContent>
+                    </motion.div>
+                  );
+                })
+              )}
             </AnimatePresence>
           </div>
         </motion.section>
