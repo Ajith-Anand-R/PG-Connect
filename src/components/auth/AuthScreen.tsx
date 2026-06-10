@@ -1056,11 +1056,7 @@ export const AuthScreen: React.FC = () => {
                             setIsLoading(true);
                             try {
                               const { data, error: dbErr } = await supabase
-                                .from('tenants')
-                                .select('id')
-                                .eq('invite_token', building)
-                                .or('invite_expires_at.is.null,invite_expires_at.gt.' + new Date().toISOString())
-                                .is('user_id', null)
+                                .rpc('validate_invite_token', { token_val: building })
                                 .maybeSingle();
 
                               if (dbErr || !data) {
