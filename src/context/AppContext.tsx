@@ -29,6 +29,8 @@ export interface TenantInfo {
   refundEligible?: boolean;
   status?: string;
   photo?: string;
+  bedOccupancyStatus?: 'Vacant' | 'Occupied' | 'Gonna Leave';
+  bedOccupancyVacateDate?: string;
 }
 
 export interface Menu {
@@ -371,6 +373,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           .single();
 
         if (tenantDetails) {
+          // If status is prebooked, we need to check the status of the allocated bed
+          let bedOccupancyStatus: 'Vacant' | 'Occupied' | 'Gonna Leave' = 'Vacant';
+          let bedOccupancyVacateDate: string | undefined = undefined;
+
+          if (tenantDetails.status === 'prebooked' && tenantDetails.bed_id) {
+            const { data: currentOccupants } = await supabase
+              .from('tenants')
+              .select('status, vacate_date')
+              .eq('bed_id', tenantDetails.bed_id)
+              .in('status', ['active', 'notice']);
+
+            if (currentOccupants && currentOccupants.length > 0) {
+              const noticeOccupant = currentOccupants.find(o => o.status === 'notice');
+              if (noticeOccupant) {
+                bedOccupancyStatus = 'Gonna Leave';
+                bedOccupancyVacateDate = noticeOccupant.vacate_date || undefined;
+              } else {
+                bedOccupancyStatus = 'Occupied';
+              }
+            }
+          }
+
           const tInfo: TenantInfo = {
             id: tenantDetails.id.toString(),
             name: userProfile.name,
@@ -401,7 +425,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             vacateDate: tenantDetails.vacate_date || undefined,
             refundEligible: tenantDetails.refund_eligible ?? false,
             status: tenantDetails.status || 'active',
-            photo: userProfile.photo || ''
+            photo: userProfile.photo || '',
+            bedOccupancyStatus,
+            bedOccupancyVacateDate
           };
           setTenant(tInfo);
 

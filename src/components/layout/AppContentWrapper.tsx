@@ -30,7 +30,19 @@ export const AppContentWrapper: React.FC<{ children: React.ReactNode }> = ({ chi
     return <AuthScreen />;
   }
 
-  if (tenant && tenant.status === 'prebooked') {
+  const showPrebookedView = React.useMemo(() => {
+    if (!tenant || tenant.status !== 'prebooked') return false;
+    if (!tenant.joiningDate || tenant.joiningDate === 'Not Set') return true;
+
+    const joinDateObj = new Date(tenant.joiningDate);
+    const today = new Date();
+    joinDateObj.setHours(0, 0, 0, 0);
+    today.setHours(0, 0, 0, 0);
+
+    return today.getTime() < joinDateObj.getTime();
+  }, [tenant]);
+
+  if (showPrebookedView) {
     return (
       <main className="flex-1 w-full max-w-md mx-auto px-4 py-6 md:py-8 flex flex-col gap-6">
         <UpcomingStayView />

@@ -138,6 +138,39 @@ export function UpcomingStayView() {
               <span className="text-slate-400 dark:text-slate-500">Security Deposit</span>
               <span className="text-slate-850 dark:text-white font-extrabold">{tenant.deposit || '₹5,000.00'}</span>
             </div>
+            {tenant.bedOccupancyStatus && (
+              <>
+                <div className="h-px bg-slate-200/40 dark:bg-slate-800/40 w-full" />
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400 dark:text-slate-500">Live Bed Status</span>
+                  <span className="font-extrabold flex items-center gap-1.5 text-right">
+                    {tenant.bedOccupancyStatus === 'Vacant' && (
+                      <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 justify-end">
+                        <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        Vacant (Ready)
+                      </span>
+                    )}
+                    {tenant.bedOccupancyStatus === 'Occupied' && (
+                      <span className="text-rose-600 dark:text-rose-405 flex items-center gap-1 justify-end">
+                        <span className="size-1.5 rounded-full bg-rose-500" />
+                        Occupied (Active)
+                      </span>
+                    )}
+                    {tenant.bedOccupancyStatus === 'Gonna Leave' && (
+                      <span className="text-amber-600 dark:text-amber-400 flex flex-col items-end leading-tight">
+                        <span className="flex items-center gap-1 justify-end">
+                          <span className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
+                          Gonna Leave
+                        </span>
+                        <span className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold mt-0.5">
+                          Vacating: {tenant.bedOccupancyVacateDate ? new Date(tenant.bedOccupancyVacateDate).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'soon'}
+                        </span>
+                      </span>
+                    )}
+                  </span>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
