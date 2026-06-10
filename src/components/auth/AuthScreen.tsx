@@ -19,7 +19,11 @@ import {
   Hash,
   Users,
   Briefcase,
-  Home
+  Home,
+  QrCode,
+  Smartphone,
+  AlertTriangle,
+  CreditCard
 } from 'lucide-react';
 
 
@@ -61,6 +65,10 @@ export const AuthScreen: React.FC = () => {
   const [step, setStep] = useState(1);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [idProofFile, setIdProofFile] = useState<File | null>(null);
+  const [pgDetails, setPgDetails] = useState<any>(null);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [isSimulatingPayment, setIsSimulatingPayment] = useState(false);
+  const [isPgGeneralCode, setIsPgGeneralCode] = useState(false);
   
   // UI states
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +101,10 @@ export const AuthScreen: React.FC = () => {
     setReference2('');
     setPhotoFile(null);
     setIdProofFile(null);
+    setPgDetails(null);
+    setPaymentCompleted(false);
+    setIsSimulatingPayment(false);
+    setIsPgGeneralCode(false);
     setStep(1);
   };
 
@@ -183,6 +195,11 @@ export const AuthScreen: React.FC = () => {
         setError("Aadhaar/ID Proof Document is required.");
         return false;
       }
+    } else if (currentStep === 6) {
+      if (!paymentCompleted) {
+        setError("Security deposit payment of ₹1,000 is required to create your account.");
+        return false;
+      }
     }
     return true;
   };
@@ -209,8 +226,8 @@ export const AuthScreen: React.FC = () => {
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate all steps from 1 to 5
-    for (let i = 1; i <= 5; i++) {
+    // Validate all steps from 1 to 6
+    for (let i = 1; i <= 6; i++) {
       if (!validateStep(i)) {
         setStep(i);
         return;
@@ -279,7 +296,43 @@ export const AuthScreen: React.FC = () => {
         id_proof_url
       };
 
-      const res = await register(name, email, phone, password, role, building, additionalDetails);
+      let registerToken = building;
+      if (isPgGeneralCode) {
+        const inviteToken = 'INV-PRE-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+        
+        // 1. Insert tenant record
+        const { error: insertTenantErr } = await supabase
+          .from('tenants')
+          .insert({
+            pg_id: pgDetails.id,
+            name: name.trim(),
+            email: email.trim(),
+            phone: phone.trim(),
+            status: 'pending',
+            invite_token: inviteToken,
+            invite_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            deposit: 1000
+          });
+          
+        if (insertTenantErr) throw insertTenantErr;
+
+        // 2. Insert booking request
+        const { error: insertBookingErr } = await supabase
+          .from('bookings')
+          .insert({
+            pg_id: pgDetails.id,
+            name: name.trim(),
+            email: email.trim(),
+            phone: phone.trim(),
+            status: 'pending'
+          });
+
+        if (insertBookingErr) throw insertBookingErr;
+        
+        registerToken = inviteToken;
+      }
+
+      const res = await register(name, email, phone, password, role, registerToken, additionalDetails);
       setIsLoading(false);
       if (res.error) {
         setError(res.error);
@@ -534,10 +587,10 @@ export const AuthScreen: React.FC = () => {
                       <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-slate-200 dark:bg-slate-800 -z-10" />
                       <div 
                         className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-blue-500 transition-all duration-300 -z-10" 
-                        style={{ width: `${((step - 1) / 4) * 100}%` }}
+                        style={{ width: `${((step - 1) / 5) * 100}%` }}
                       />
                       
-                      {[1, 2, 3, 4, 5].map((s) => (
+                      {[1, 2, 3, 4, 5, 6].map((s) => (
                         <button
                           key={s}
                           type="button"
@@ -547,12 +600,12 @@ export const AuthScreen: React.FC = () => {
                             } else if (s > step) {
                               let valid = true;
                               for (let i = step; i < s; i++) {
-                                if (!validateStep(i)) {
-                                  valid = false;
-                                  break;
+                                  if (!validateStep(i)) {
+                                    valid = false;
+                                    break;
+                                  }
                                 }
-                              }
-                              if (valid) setStep(s);
+                                if (valid) setStep(s);
                             }
                           }}
                           className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border transition-all ${
@@ -573,6 +626,7 @@ export const AuthScreen: React.FC = () => {
                       <span className={step === 3 ? "text-blue-600 dark:text-blue-400" : ""}>Stay & ID</span>
                       <span className={step === 4 ? "text-blue-600 dark:text-blue-400" : ""}>Details</span>
                       <span className={step === 5 ? "text-blue-600 dark:text-blue-400" : ""}>Docs</span>
+                      <span className={step === 6 ? "text-blue-600 dark:text-blue-400" : ""}>Deposit</span>
                     </div>
                   </div>
 
@@ -1032,75 +1086,197 @@ export const AuthScreen: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Navigation / Action Buttons */}
-                  <div className="flex gap-3 pt-2">
-                    {step > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => setStep(step - 1)}
-                        className="flex-1 h-10 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 font-bold rounded-xl active:scale-[0.98] flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer text-xs"
-                        disabled={isLoading}
-                      >
-                        <ArrowLeft className="size-4" />
-                        Back
-                      </button>
-                    )}
-                    
-                    {step < 5 ? (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          if (step === 1) {
-                            setError(null);
-                            if (!validateStep(1)) return;
-                            
-                            setIsLoading(true);
-                            try {
-                              const { data, error: dbErr } = await supabase
-                                .rpc('validate_invite_token', { token_val: building })
-                                .maybeSingle();
+                    {/* Step 6: Security Deposit Payment */}
+                    {step === 6 && (
+                      <div className="space-y-4 animate-in fade-in duration-200 text-left">
+                        <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 p-4 rounded-2xl flex items-center gap-3">
+                          <ShieldCheck className="text-blue-600 dark:text-blue-400 size-6 shrink-0" />
+                          <div className="text-xs">
+                            <h4 className="font-extrabold text-slate-850 dark:text-white">Refundable Security Deposit</h4>
+                            <p className="text-slate-500 dark:text-slate-400 mt-0.5 font-semibold">A deposit of ₹1,000 is required. It is fully refundable upon vacating the premises according to notice rules.</p>
+                          </div>
+                        </div>
 
-                              if (dbErr || !data) {
-                                setError("Invalid, expired, or already registered invite token.");
+                        {/* Payment Details */}
+                        <div className="border border-slate-200/60 dark:border-slate-800 p-4 rounded-2xl bg-slate-50/50 dark:bg-slate-950/20 space-y-3.5">
+                          <div className="flex justify-between items-center text-xs font-bold">
+                            <span className="text-slate-400 dark:text-slate-500">Deposit Amount</span>
+                            <span className="text-lg font-black text-slate-900 dark:text-white font-mono">₹1,000.00</span>
+                          </div>
+                          
+                          <div className="h-px bg-slate-200/80 dark:bg-slate-800/80 w-full" />
+                          
+                          <div className="flex justify-between items-center text-xs font-bold">
+                            <span className="text-slate-400 dark:text-slate-500">Payee PG</span>
+                            <span className="text-slate-850 dark:text-white font-extrabold">{pgDetails?.name || 'PG Owner'}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-xs font-bold">
+                            <span className="text-slate-400 dark:text-slate-500">Owner Name</span>
+                            <span className="text-slate-850 dark:text-white font-extrabold">{pgDetails?.upi_registered_name || pgDetails?.upi_name || 'PG Owner'}</span>
+                          </div>
+
+                          <div className="flex justify-between items-center text-xs font-bold">
+                            <span className="text-slate-400 dark:text-slate-500">UPI ID / Number</span>
+                            <span className="text-slate-850 dark:text-white font-extrabold select-all">
+                              {pgDetails?.upi_id || pgDetails?.upi_number || pgDetails?.phone || 'Not Configured'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* UPI Payment Button & QR */}
+                        <div className="flex flex-col items-center gap-3">
+                          {pgDetails && (
+                            <a
+                              href={`upi://pay?pa=${pgDetails.upi_id || (pgDetails.upi_number ? `${pgDetails.upi_number}@upi` : `${pgDetails.phone.replace(/[^0-9]/g, '')}@upi`)}&pn=${encodeURIComponent(pgDetails.upi_registered_name || pgDetails.upi_name || pgDetails.name)}&am=1000&cu=INR&tn=${encodeURIComponent("Security Deposit for " + name)}`}
+                              className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.98] text-xs uppercase tracking-wider select-none text-center"
+                            >
+                              <Smartphone className="size-4" />
+                              Pay ₹1,000 via UPI App
+                            </a>
+                          )}
+
+                          <div className="flex items-center justify-center bg-white p-3 rounded-xl border border-slate-200 dark:border-slate-800 w-full max-w-[160px] mx-auto relative group">
+                            <QrCode className="size-32 text-slate-850" />
+                            <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 flex flex-col items-center justify-center p-2 text-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
+                              <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400">Scan QR with GPay, PhonePe or Paytm</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Payment Verification / Simulation */}
+                        <div className="pt-2 border-t border-slate-100 dark:border-slate-900">
+                          {paymentCompleted ? (
+                            <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 text-emerald-600 dark:text-emerald-400 p-3 rounded-xl flex items-center justify-center gap-2 text-xs font-bold leading-none select-none">
+                              <Check className="size-4.5" />
+                              Payment Verified Successfully
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsSimulatingPayment(true);
+                                setTimeout(() => {
+                                  setPaymentCompleted(true);
+                                  setIsSimulatingPayment(false);
+                                }, 1500);
+                              }}
+                              disabled={isSimulatingPayment}
+                              className="w-full h-10 bg-slate-900 hover:bg-slate-850 text-white dark:bg-slate-800 dark:hover:bg-slate-700 font-bold rounded-xl active:scale-[0.98] flex items-center justify-center gap-1.5 transition-all text-xs border border-transparent disabled:opacity-60 cursor-pointer"
+                            >
+                              {isSimulatingPayment ? (
+                                <>
+                                  <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0" />
+                                  Verifying Payment...
+                                </>
+                              ) : (
+                                <>
+                                  Verify Payment
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Navigation / Action Buttons */}
+                    <div className="flex gap-3 pt-2">
+                      {step > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setStep(step - 1)}
+                          className="flex-1 h-10 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-900 font-bold rounded-xl active:scale-[0.98] flex items-center justify-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer text-xs"
+                          disabled={isLoading}
+                        >
+                          <ArrowLeft className="size-4" />
+                          Back
+                        </button>
+                      )}
+                      
+                      {step < 6 ? (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (step === 1) {
+                              setError(null);
+                              if (!validateStep(1)) return;
+                              
+                              setIsLoading(true);
+                              try {
+                                // 1. Check if general PG invite code
+                                const { data: pgData, error: pgErr } = await supabase
+                                  .from('pgs')
+                                  .select('id, name, upi_id, upi_number, upi_registered_name, phone')
+                                  .eq('invite_code', building)
+                                  .maybeSingle();
+
+                                if (pgData) {
+                                  setPgDetails(pgData);
+                                  setIsPgGeneralCode(true);
+                                  setIsLoading(false);
+                                  setStep(2);
+                                  return;
+                                }
+
+                                // 2. Otherwise check if tenant invite token
+                                const { data: tenantDetails, error: tenantErr } = await supabase
+                                  .from('tenants')
+                                  .select('id, pg_id, invite_expires_at, pgs(*)')
+                                  .eq('invite_token', building)
+                                  .is('user_id', null)
+                                  .maybeSingle();
+
+                                if (tenantErr || !tenantDetails) {
+                                  setError("Invalid, expired, or already registered invite token.");
+                                  setIsLoading(false);
+                                  return;
+                                }
+
+                                if (tenantDetails.invite_expires_at && new Date(tenantDetails.invite_expires_at) < new Date()) {
+                                  setError("This invite token has expired.");
+                                  setIsLoading(false);
+                                  return;
+                                }
+
+                                setPgDetails(tenantDetails.pgs);
+                                setIsPgGeneralCode(false);
+                              } catch {
+                                setError("Error validating invite token. Please try again.");
                                 setIsLoading(false);
                                 return;
                               }
-                            } catch {
-                              setError("Error validating invite token. Please try again.");
                               setIsLoading(false);
-                              return;
+                              setStep(2);
+                            } else {
+                              if (validateStep(step)) {
+                                setStep(step + 1);
+                              }
                             }
-                            setIsLoading(false);
-                            setStep(2);
-                          } else {
-                            if (validateStep(step)) {
-                              setStep(step + 1);
-                            }
-                          }
-                        }}
-                        className="flex-1 h-10 bg-[#003d9b] hover:bg-[#0052cc] text-white dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-slate-950 font-bold rounded-xl shadow-md active:scale-[0.98] flex items-center justify-center gap-1.5 transition-all border border-transparent disabled:opacity-50 cursor-pointer text-xs"
-                        disabled={isLoading}
-                      >
-                        Next
-                        <ArrowRight className="size-4" />
-                      </button>
-                    ) : (
-                      <button
-                        type="submit"
-                        className="flex-1 h-10 bg-[#003d9b] hover:bg-[#0052cc] text-white dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-slate-950 font-bold rounded-xl shadow-md active:scale-[0.98] flex items-center justify-center gap-1.5 transition-all border border-transparent disabled:opacity-50 cursor-pointer text-xs"
-                        disabled={isLoading}
-                      >
-                        {isLoading ? (
-                          <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <>
-                            Register
-                            <ArrowRight className="size-4" />
-                          </>
-                        )}
-                      </button>
-                    )}
-                  </div>
+                          }}
+                          className="flex-1 h-10 bg-[#003d9b] hover:bg-[#0052cc] text-white dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-slate-950 font-bold rounded-xl shadow-md active:scale-[0.98] flex items-center justify-center gap-1.5 transition-all border border-transparent disabled:opacity-50 cursor-pointer text-xs"
+                          disabled={isLoading}
+                        >
+                          Next
+                          <ArrowRight className="size-4" />
+                        </button>
+                      ) : (
+                        <button
+                          type="submit"
+                          className="flex-1 h-10 bg-[#003d9b] hover:bg-[#0052cc] text-white dark:bg-blue-600 dark:hover:bg-blue-500 dark:text-slate-950 font-bold rounded-xl shadow-md active:scale-[0.98] flex items-center justify-center gap-1.5 transition-all border border-transparent disabled:opacity-50 cursor-pointer text-xs"
+                          disabled={isLoading || !paymentCompleted}
+                        >
+                          {isLoading ? (
+                            <span className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <>
+                              Register
+                              <ArrowRight className="size-4" />
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
 
                   {/* Toggle Mode */}
                   <div className="text-center pt-2">
