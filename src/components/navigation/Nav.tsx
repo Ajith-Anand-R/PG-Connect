@@ -25,6 +25,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { motion } from 'framer-motion';
 
 export const Nav: React.FC = () => {
   const pathname = usePathname();
@@ -38,6 +39,14 @@ export const Nav: React.FC = () => {
     { label: 'Payments', href: '/payments', icon: CreditCard },
     { label: 'Services', href: '/services', icon: Wrench },
     { label: 'Notices', href: '/notices', icon: Megaphone },
+    { label: 'Community', href: '/community', icon: Users },
+    { label: 'Profile', href: '/profile', icon: User },
+  ];
+
+  const mobileNavItems = [
+    { label: 'Home', href: '/', icon: LayoutDashboard },
+    { label: 'Payments', href: '/payments', icon: CreditCard },
+    { label: 'Services', href: '/services', icon: Wrench },
     { label: 'Community', href: '/community', icon: Users },
     { label: 'Profile', href: '/profile', icon: User },
   ];
@@ -125,28 +134,33 @@ export const Nav: React.FC = () => {
       </nav>
 
       {/* Bottom Nav Bar (Mobile Only) */}
-      <nav className="md:hidden fixed bottom-0 w-full z-50 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-t border-slate-100 dark:border-slate-800 shadow-[0_-4px_16px_rgba(0,0,0,0.04)] pb-safe flex justify-around items-center py-2.5 px-4">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex flex-col items-center justify-center transition-all duration-200 active:scale-90 ${
-                isActive
-                  ? 'bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary rounded-2xl px-5 py-2'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 px-3 py-2'
-              }`}
-            >
-              <Icon className="size-5" />
-              <span className="text-[10px] font-semibold tracking-wide mt-1">
-                {item.label}
-              </span>
-            </Link>
-          );
-        })}
-      </nav>
+      <div className="md:hidden fixed bottom-4 left-4 right-4 z-50 max-w-[416px] mx-auto">
+        <nav className="bg-white/85 dark:bg-slate-950/85 backdrop-blur-xl border border-slate-200/40 dark:border-slate-800/40 shadow-[0_12px_40px_rgba(0,0,0,0.08)] rounded-[22px] py-1.5 px-2.5 flex justify-between items-center relative">
+          {mobileNavItems.map((item) => {
+            const isActive = pathname === item.href;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="relative flex flex-col items-center justify-center py-1.5 px-3 transition-all duration-200 active:scale-95 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 flex-1 min-h-[48px]"
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabIndicator"
+                    className="absolute inset-0 bg-primary/10 dark:bg-primary/20 rounded-[14px] -z-10"
+                    transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                  />
+                )}
+                <Icon className={`size-4.5 transition-colors duration-200 ${isActive ? 'text-primary' : 'text-slate-505'}`} />
+                <span className={`text-[9.5px] font-bold tracking-wide mt-1 transition-colors duration-200 ${isActive ? 'text-primary font-black' : 'text-slate-500'}`}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
     </>
   );
 };

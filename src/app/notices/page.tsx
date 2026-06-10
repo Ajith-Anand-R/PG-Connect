@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
+import { motion } from 'framer-motion';
 import { 
   Megaphone, 
   Search, 
@@ -115,54 +116,61 @@ export default function NoticesPage() {
             )}
           </div>
         ) : (
-          filteredNotices.map((notice) => {
+          filteredNotices.map((notice, idx) => {
             const isUrgent = notice.category === 'Maintenance';
             return (
-              <Card 
-                key={notice.id} 
-                className={`border-slate-100 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col justify-between hover:-translate-y-0.5 rounded-2xl group ${
-                  isUrgent ? 'border-l-4 border-l-destructive' : ''
-                }`}
+              <motion.div
+                key={notice.id}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: idx * 0.04, ease: "easeOut" }}
+                className="flex flex-col h-full"
               >
-                <CardContent className="p-5 flex flex-col gap-4 h-full justify-between">
-                  <div>
-                    {isUrgent && (
-                      <div className="absolute -right-2 -top-2 opacity-5 pointer-events-none group-hover:scale-110 transition-transform">
-                        <AlertTriangle className="size-20 text-destructive" />
+                <Card 
+                  className={`border-slate-100 dark:border-slate-800 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.04)] hover:shadow-md transition-all duration-300 relative overflow-hidden flex flex-col justify-between hover:-translate-y-0.5 rounded-2xl group h-full ${
+                    isUrgent ? 'border-l-4 border-l-destructive' : ''
+                  }`}
+                >
+                  <CardContent className="p-5 flex flex-col gap-4 h-full justify-between">
+                    <div>
+                      {isUrgent && (
+                        <div className="absolute -right-2 -top-2 opacity-5 pointer-events-none group-hover:scale-110 transition-transform">
+                          <AlertTriangle className="size-20 text-destructive" />
+                        </div>
+                      )}
+                      
+                      <div className="flex justify-between items-center gap-2 mb-3">
+                        <Badge className={`${
+                          isUrgent 
+                            ? 'bg-destructive/10 text-destructive' 
+                            : notice.category === 'Event'
+                            ? 'bg-primary/10 text-primary dark:text-primary'
+                            : 'bg-secondary/10 text-secondary'
+                        } border-transparent text-[10px] font-bold py-0.5 px-2 rounded-full`}>
+                          {notice.category}
+                        </Badge>
+                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                          <Calendar className="size-3" />
+                          {notice.date}
+                        </span>
                       </div>
-                    )}
-                    
-                    <div className="flex justify-between items-center gap-2 mb-3">
-                      <Badge className={`${
-                        isUrgent 
-                          ? 'bg-destructive/10 text-destructive' 
-                          : notice.category === 'Event'
-                          ? 'bg-primary/10 text-primary dark:text-primary'
-                          : 'bg-secondary/10 text-secondary'
-                      } border-transparent text-[10px] font-bold py-0.5 px-2 rounded-full`}>
-                        {notice.category}
-                      </Badge>
-                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1">
-                        <Calendar className="size-3" />
-                        {notice.date}
-                      </span>
+
+                      <h4 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-primary transition-colors line-clamp-1">{notice.title}</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-355 mt-2 line-clamp-3 leading-relaxed">
+                        {notice.content}
+                      </p>
                     </div>
 
-                    <h4 className="font-bold text-slate-900 dark:text-white text-base group-hover:text-primary transition-colors line-clamp-1">{notice.title}</h4>
-                    <p className="text-xs text-slate-600 dark:text-slate-355 mt-2 line-clamp-3 leading-relaxed">
-                      {notice.content}
-                    </p>
-                  </div>
-
-                  <button 
-                    onClick={() => setSelectedNotice(notice)}
-                    className="mt-4 text-xs font-bold text-primary hover:underline flex items-center gap-0.5 w-max group/btn cursor-pointer"
-                  >
-                    Read full notice 
-                    <ChevronRight className="size-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
-                  </button>
-                </CardContent>
-              </Card>
+                    <button 
+                      onClick={() => setSelectedNotice(notice)}
+                      className="mt-4 text-xs font-bold text-primary hover:underline flex items-center gap-0.5 w-max group/btn cursor-pointer"
+                    >
+                      Read full notice 
+                      <ChevronRight className="size-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
+                    </button>
+                  </CardContent>
+                </Card>
+              </motion.div>
             );
           })
         )}

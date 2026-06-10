@@ -28,12 +28,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export default function ProfilePage() {
-  const { tenant, logout, bills } = useApp();
+  const { tenant, logout, bills, updateProfile } = useApp();
   
   // Local state to simulate profile edit
   const [phoneVal, setPhoneVal] = useState(tenant.phone);
   const [emailVal, setEmailVal] = useState(tenant.email);
   const [emergencyContact, setEmergencyContact] = useState(tenant.emergencyContact || "Not Configured");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
   
   /* eslint-disable react-hooks/set-state-in-effect */
   React.useEffect(() => {
@@ -48,9 +49,16 @@ export default function ProfilePage() {
   const [isLeaseOpen, setIsLeaseOpen] = useState(false);
   const [showGatePass, setShowGatePass] = useState(false);
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsEditOpen(false);
+    setIsSavingProfile(true);
+    const { error } = await updateProfile(emailVal, phoneVal, emergencyContact);
+    setIsSavingProfile(false);
+    if (error) {
+      alert("Error saving profile: " + error);
+    } else {
+      setIsEditOpen(false);
+    }
   };
 
   const houseRules = [
@@ -274,9 +282,9 @@ export default function ProfilePage() {
             </div>
 
             <DialogFooter className="mt-2 flex gap-2">
-              <DialogClose render={<Button type="button" variant="outline" className="flex-1 text-xs">Cancel</Button>} />
-              <Button type="submit" className="flex-1 bg-primary text-xs font-bold">
-                Save Changes
+              <DialogClose render={<Button type="button" variant="outline" className="flex-1 text-xs" disabled={isSavingProfile}>Cancel</Button>} />
+              <Button type="submit" className="flex-1 bg-primary text-xs font-bold" disabled={isSavingProfile}>
+                {isSavingProfile ? "Saving..." : "Save Changes"}
               </Button>
             </DialogFooter>
           </form>

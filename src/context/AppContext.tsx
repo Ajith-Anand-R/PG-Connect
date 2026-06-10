@@ -121,6 +121,7 @@ interface AppContextType {
   };
   updateMeals: (breakfast: boolean, lunch: boolean, dinner: boolean) => void;
   updateDietary: (dietary: 'Veg' | 'Non-Veg' | 'Egg') => void;
+  updateProfile: (email: string, phone: string, emergencyContact: string) => Promise<{ error: string | null }>;
   isLoggedIn: boolean;
   userRole: 'Tenant' | null;
   login: (emailOrPhone: string, password?: string) => Promise<{ error: string | null }>;
@@ -352,8 +353,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             })));
           }
 
-          // Seed dynamic chats
-          setChats([]);
+          // Seed dynamic chats from database
+          const fetchChatMessages = async (pgIdVal: number, tenantNameVal: string, tenantRoomVal: string) => {
+            const { data: dbMsgs } = await supabase
+              .from('messages')
+              .select('*')
+              .eq('pg_id', pgIdVal)
+              .order('created_at', { ascending: true });
+
+            const defaultThreads: ChatThread[] = [
+              {
+                id: 'property-group',
+                title: `${tenantDetails.pgs?.name || 'NestHaven'} Wing B Chat`,
+                subtitle: 'Group discussion with all residents',
+                avatar: '',
+                messages: []
+              },
+              {
+                id: 'room-group',
+                title: `${tenantRoomVal} Room Chat`,
+                subtitle: 'Roommates only',
+                avatar: '',
+                messages: []
+              },
+              {
+                id: 'owner-dm',
+                title: 'Kabir (Property Owner)',
+                subtitle: 'Direct support & landlord DM',
+                avatar: '',
+                messages: []
+              }
+            ];
+
+            if (dbMsgs) {
+              dbMsgs.forEach((m: any) => {
+                const msgObj: Message = {
+                  id: m.id.toString(),
+                  senderName: m.sender_name,
+                  senderAvatar: '',
+                  text: m.text,
+                  timestamp: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  isSelf: m.sender_id === uid
+                };
+
+                const thread = defaultThreads.find(t => t.id === m.thread_id);
+                if (thread) {
+                  thread.messages.push(msgObj);
+                }
+              });
+            }
+            setChats(defaultThreads);
+          };
+
+          await fetchChatMessages(tenantDetails.pg_id, userProfile.name, tInfo.room);
 
           // Fetch Bills
           const { data: dbPayments } = await supabase
@@ -407,6 +459,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Monitor Supabase Auth state changes
   useEffect(() => {
     let sub: ReturnType<typeof supabase.channel> | null = null;
+    let msgSub: ReturnType<typeof supabase.channel> | null = null;
     let subscription: any = null;
 
     const setupAuth = async () => {
@@ -424,8 +477,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // Setup real-time subscription for instant syncing
           sub = supabase
             .channel('schema-db-changes')
-            .on('postgres_changes', { event: '*', schema: 'public' }, () => {
+            .on('postgres_changes', { event: '*', schema: 'public' }, (payload) => {
+              if (payload.table === 'messages') return;
               fetchData(session.user.id, session.user.email || '');
+            })
+            .subscribe();
+
+          // Setup real-time subscription for messages only
+          msgSub = supabase
+            .channel('realtime-messages')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+              const newMsg = payload.new;
+              setChats(prev => prev.map(thread => {
+                if (thread.id === newMsg.thread_id) {
+                  if (thread.messages.some(m => m.id === newMsg.id.toString())) {
+                    return thread;
+                  }
+                  return {
+                    ...thread,
+                    messages: [
+                      ...thread.messages,
+                      {
+                        id: newMsg.id.toString(),
+                        senderName: newMsg.sender_name,
+                        senderAvatar: '',
+                        text: newMsg.text,
+                        timestamp: new Date(newMsg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        isSelf: newMsg.sender_id === session.user.id
+                      }
+                    ]
+                  };
+                }
+                return thread;
+              }));
             })
             .subscribe();
         } else {
@@ -451,6 +535,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           if (sub) {
             supabase.removeChannel(sub);
           }
+          if (msgSub) {
+            supabase.removeChannel(msgSub);
+          }
         }
       });
       subscription = data.subscription;
@@ -464,6 +551,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       if (sub) {
         supabase.removeChannel(sub);
+      }
+      if (msgSub) {
+        supabase.removeChannel(msgSub);
       }
     };
   }, [fetchData]);
@@ -619,49 +709,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Send Chat message (Local state only)
-  const sendChatMessage = (threadId: string, text: string) => {
-    const newMsg: Message = {
-      id: `msg-${Date.now()}`,
-      senderName: tenant.name || 'User',
-      senderAvatar: "",
-      text,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isSelf: true
-    };
+  // Send Chat message (Database backed)
+  const sendChatMessage = async (threadId: string, text: string) => {
+    if (!userId || !pgId) return;
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          sender_name: tenant.name || 'Tenant',
+          sender_id: userId,
+          text,
+          pg_id: pgId,
+          thread_id: threadId
+        });
 
-    setChats(prev => prev.map(thread => {
-      if (thread.id === threadId) {
-        return {
-          ...thread,
-          messages: [...thread.messages, newMsg]
-        };
-      }
-      return thread;
-    }));
+      if (error) throw error;
+      
+      const newMsg: Message = {
+        id: `msg-local-${Date.now()}`,
+        senderName: tenant.name || 'Tenant',
+        senderAvatar: "",
+        text,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isSelf: true
+      };
 
-    if (threadId === "thread-1") {
-      setTimeout(() => {
-        setChats(prev => prev.map(thread => {
-          if (thread.id === threadId) {
-            return {
-              ...thread,
-              messages: [
-                ...thread.messages,
-                {
-                  id: `msg-reply-${Date.now()}`,
-                  senderName: "Kabir",
-                  senderAvatar: "",
-                  text: "Got it! Adding it now.",
-                  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                  isSelf: false
-                }
-              ]
-            };
-          }
-          return thread;
-        }));
-      }, 2000);
+      setChats(prev => prev.map(thread => {
+        if (thread.id === threadId) {
+          return {
+            ...thread,
+            messages: [...thread.messages, newMsg]
+          };
+        }
+        return thread;
+      }));
+    } catch (err) {
+      console.error('Error sending message:', err);
     }
   };
 
@@ -708,6 +791,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const updateProfile = async (email: string, phone: string, emergencyContact: string) => {
+    if (!userId || !tenant.id) return { error: "Not logged in" };
+    try {
+      // 1. Update users table
+      const { error: userError } = await supabase
+        .from('users')
+        .update({ email, phone })
+        .eq('id', userId);
+
+      if (userError) throw userError;
+
+      // 2. Update tenants table
+      const { error: tenantError } = await supabase
+        .from('tenants')
+        .update({ emergency_contact: emergencyContact })
+        .eq('id', parseInt(tenant.id));
+
+      if (tenantError) throw tenantError;
+
+      // 3. Update local state
+      setTenant(prev => ({
+        ...prev,
+        email,
+        phone,
+        emergencyContact
+      }));
+
+      return { error: null };
+    } catch (err: any) {
+      console.error('Error updating profile:', err);
+      return { error: err.message || "Failed to update profile" };
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       tenant,
@@ -726,6 +843,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       meals,
       updateMeals,
       updateDietary,
+      updateProfile,
       isLoggedIn,
       userRole,
       login,

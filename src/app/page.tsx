@@ -13,14 +13,15 @@ import {
   MessageSquare, 
   UserCheck,
   ChevronRight,
-  Clock
+  Clock,
+  Megaphone
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 export default function DashboardPage() {
-  const { tenant, bills, requests, payBill, menuList } = useApp();
+  const { tenant, bills, requests, payBill, menuList, notices } = useApp();
   const [isPaying, setIsPaying] = useState(false);
 
   // Find electricity bill (category: Utility)
@@ -57,6 +58,30 @@ export default function DashboardPage() {
           Welcome to your portal. Here is your stay status today.
         </p>
       </header>
+
+      {/* Latest Announcement Notice */}
+      {notices && notices.length > 0 && (
+        <div className="bg-gradient-to-r from-blue-500/10 via-primary/5 to-primary/10 dark:from-primary/15 dark:to-primary/5 border border-primary/15 rounded-3xl p-4.5 flex gap-4 items-start relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-xl -mr-6 -mt-6 group-hover:scale-110 transition-transform duration-500" />
+          <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Megaphone className="size-4.5" />
+          </div>
+          <div className="flex-1 min-w-0 pr-4">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-black text-primary uppercase tracking-wider">Latest Notice • {notices[0].date}</span>
+            </div>
+            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white mt-1 truncate">
+              {notices[0].title}
+            </h3>
+            <p className="text-xs text-slate-505 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+              {notices[0].content}
+            </p>
+          </div>
+          <Link href="/notices" className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-500 hover:text-primary transition-colors active:scale-90">
+            <ChevronRight className="size-4" />
+          </Link>
+        </div>
+      )}
 
       {/* Bento Grid Elements */}
       {/* 1. Financial Overview */}

@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
+import { motion } from 'framer-motion';
 import { 
   MessageSquare, 
   Send, 
@@ -91,15 +92,18 @@ export default function ChatsPage() {
 
           {/* List of Threads */}
           <div className="flex-1 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-900">
-            {chats.map((thread) => {
+            {chats.map((thread, idx) => {
               const lastMessage = thread.messages[thread.messages.length - 1];
               const isActive = thread.id === activeThreadId;
               
               return (
-                <button
+                <motion.button
                   key={thread.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.2, delay: idx * 0.03, ease: "easeOut" }}
                   onClick={() => setActiveThreadId(thread.id)}
-                  className={`w-full text-left p-4 flex gap-3 items-center hover:bg-slate-50 dark:hover:bg-slate-900/40 transition-colors ${
+                  className={`w-full text-left p-4 flex gap-3 items-center hover:bg-slate-50/60 dark:hover:bg-slate-900/40 transition-colors cursor-pointer ${
                     isActive ? 'bg-primary/5 dark:bg-primary/10' : ''
                   }`}
                 >
@@ -130,7 +134,7 @@ export default function ChatsPage() {
                   </div>
                   
                   <ChevronRight className="size-4 text-slate-300 dark:text-slate-700" />
-                </button>
+                </motion.button>
               );
             })}
           </div>
@@ -195,14 +199,17 @@ export default function ChatsPage() {
                   const isSelf = msg.isSelf;
                   
                   return (
-                    <div 
+                    <motion.div 
                       key={msg.id}
-                      className={`flex gap-2.5 max-w-[75%] items-end ${
+                      initial={{ opacity: 0, y: 10, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                      className={`flex gap-2.5 max-w-[80%] items-end ${
                         isSelf ? 'ml-auto flex-row-reverse' : ''
                       }`}
                     >
                       {!isSelf && (
-                        <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-[9px] text-slate-600 shrink-0">
+                        <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center font-bold text-[9px] text-slate-600 shrink-0 select-none">
                           {msg.senderAvatar ? (
                             <img src={msg.senderAvatar} alt={msg.senderName} className="w-full h-full object-cover" />
                           ) : (
@@ -213,24 +220,24 @@ export default function ChatsPage() {
                       
                       <div className="flex flex-col gap-0.5">
                         {!isSelf && (
-                          <span className="text-[9px] font-bold text-slate-400 ml-1.5">
+                          <span className="text-[9px] font-bold text-slate-400 ml-1.5 select-none">
                             {msg.senderName}
                           </span>
                         )}
                         <div className={`p-3 rounded-2xl text-xs leading-normal shadow-[0_1px_2px_rgba(0,0,0,0.02)] ${
                           isSelf 
-                            ? 'bg-primary text-white rounded-br-none' 
-                            : 'bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 rounded-bl-none border border-slate-100 dark:border-slate-800'
+                            ? 'bg-gradient-to-tr from-primary to-blue-600 text-white rounded-br-none' 
+                            : 'bg-white dark:bg-slate-955 text-slate-800 dark:text-slate-200 rounded-bl-none border border-slate-100 dark:border-slate-800'
                         }`}>
                           {msg.text}
                         </div>
-                        <span className={`text-[8px] text-slate-400 font-semibold mt-0.5 ${
+                        <span className={`text-[8px] text-slate-400 font-semibold mt-0.5 select-none ${
                           isSelf ? 'text-right mr-1.5' : 'ml-1.5'
                         }`}>
                           {msg.timestamp}
                         </span>
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
                 <div ref={messagesEndRef} />
