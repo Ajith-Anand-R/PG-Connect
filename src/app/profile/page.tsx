@@ -13,7 +13,9 @@ import {
   Lock,
   Edit2,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Calendar,
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -48,7 +50,7 @@ const itemVariants = {
 };
 
 export default function ProfilePage() {
-  const { tenant, logout, bills, updateProfile } = useApp();
+  const { tenant, logout, bills, updateProfile, submitNotice, cancelNotice } = useApp();
   
   // Local state to simulate profile edit
   const [phoneVal, setPhoneVal] = useState(tenant.phone);
@@ -68,6 +70,10 @@ export default function ProfilePage() {
   const [isRulesOpen, setIsRulesOpen] = useState(false);
   const [isLeaseOpen, setIsLeaseOpen] = useState(false);
   const [showGatePass, setShowGatePass] = useState(false);
+  
+  const [isVacateOpen, setIsVacateOpen] = useState(false);
+  const [vacateDateVal, setVacateDateVal] = useState("");
+  const [isSubmittingNotice, setIsSubmittingNotice] = useState(false);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,7 +216,7 @@ export default function ProfilePage() {
           </Card>
 
           {/* Quick Links Bento Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* Lease Agreement card */}
             <Card 
               className="glass-card glass-card-hover border-transparent shadow-none cursor-pointer p-0 group rounded-3xl"
@@ -222,11 +228,11 @@ export default function ProfilePage() {
                     <FileText className="size-5" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-tight">Lease Agreement</h4>
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-tight">Lease</h4>
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-semibold">Valid till {tenant.leaseEndDate || 'Dec 14, 2026'}</p>
                   </div>
                 </div>
-                <ChevronRight className="size-4 text-slate-350 dark:text-slate-700 group-hover:text-primary transition-colors" />
+                <ChevronRight className="size-4 text-slate-355 dark:text-slate-700 group-hover:text-primary transition-colors" />
               </CardContent>
             </Card>
 
@@ -242,7 +248,38 @@ export default function ProfilePage() {
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-tight">House Rules</h4>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-semibold">Community Guidelines</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-semibold">Community Guide</p>
+                  </div>
+                </div>
+                <ChevronRight className="size-4 text-slate-355 dark:text-slate-700 group-hover:text-primary transition-colors" />
+              </CardContent>
+            </Card>
+
+            {/* Vacate PG Notice Card */}
+            <Card 
+              className={`glass-card glass-card-hover border-transparent shadow-none cursor-pointer p-0 group rounded-3xl ${
+                tenant.status === "notice" ? "border-amber-500/30 bg-amber-500/5 shadow-md shadow-amber-500/5" : ""
+              }`}
+              onClick={() => setIsVacateOpen(true)}
+            >
+              <CardContent className="p-4.5 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-[0_4px_12px_rgba(244,63,94,0.06)] ${
+                    tenant.status === "notice"
+                      ? "bg-amber-500/15 text-amber-600 dark:text-amber-450 border border-amber-500/20"
+                      : "bg-rose-500/10 text-rose-600 dark:text-rose-455 border border-rose-500/10"
+                  }`}>
+                    {tenant.status === "notice" ? <Calendar className="size-5" /> : <LogOut className="size-5" style={{ transform: "rotate(180deg)" }} />}
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white leading-tight">
+                      {tenant.status === "notice" ? "Notice Active" : "Vacate PG"}
+                    </h4>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 font-semibold">
+                      {tenant.status === "notice" 
+                        ? `Leaves: ${tenant.vacateDate ? new Date(tenant.vacateDate).toLocaleDateString([], { month: 'short', day: 'numeric' }) : 'Pending'}` 
+                        : "Submit notice"}
+                    </p>
                   </div>
                 </div>
                 <ChevronRight className="size-4 text-slate-355 dark:text-slate-700 group-hover:text-primary transition-colors" />
@@ -432,6 +469,179 @@ export default function ProfilePage() {
           </div>
 
           <DialogClose render={<Button className="w-full bg-primary hover:bg-primary/95 font-bold text-xs rounded-xl cursor-pointer">Done</Button>} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Vacate notice dialog */}
+      <Dialog open={isVacateOpen} onOpenChange={setIsVacateOpen}>
+        <DialogContent className="max-w-md w-full p-6 rounded-3xl bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border border-slate-100 dark:border-slate-900 shadow-2xl">
+          {tenant.status !== "notice" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                  <LogOut className="size-5 text-rose-500" style={{ transform: "rotate(180deg)" }} />
+                  Submit Vacate Notice
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 mt-1">
+                  Plan your check-out. Security deposit refund rules apply.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="flex flex-col gap-4 mt-4 text-xs font-semibold">
+                <div className="bg-slate-50 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-850 flex flex-col gap-2">
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">Refundable Deposit Rule:</h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
+                    - You paid a <span className="text-slate-800 dark:text-slate-200 font-extrabold">₹1,000 refundable deposit</span> when joining.
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
+                    - You must inform us at least <span className="text-slate-800 dark:text-slate-200 font-extrabold">1 month (30 days)</span> before you leave via this app to be eligible for a refund. Otherwise, no refund is issued.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="vacate-date" className="text-xs font-bold text-slate-700 dark:text-slate-300">Planned Checkout Date</Label>
+                  <Input 
+                    type="date"
+                    id="vacate-date"
+                    min={new Date(Date.now() + 86400000).toISOString().split('T')[0]}
+                    value={vacateDateVal}
+                    onChange={(e) => setVacateDateVal(e.target.value)}
+                    required
+                    className="w-full text-xs rounded-xl"
+                  />
+                </div>
+
+                {vacateDateVal && (() => {
+                  const target = new Date(vacateDateVal);
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const diffTime = target.getTime() - today.getTime();
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  const isEligible = diffDays >= 30;
+
+                  return (
+                    <div className={`p-4 rounded-2xl border flex gap-3 ${
+                      isEligible 
+                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400" 
+                        : "bg-rose-500/10 border-rose-500/20 text-rose-600 dark:text-rose-455"
+                    }`}>
+                      {isEligible ? (
+                        <CheckCircle2 className="size-5 shrink-0 mt-0.5" />
+                      ) : (
+                        <AlertTriangle className="size-5 shrink-0 mt-0.5 text-rose-500" />
+                      )}
+                      <div className="flex flex-col gap-1">
+                        <span className="font-bold text-xs">Notice Period: {diffDays} Days</span>
+                        <p className="text-[10px] leading-relaxed opacity-90 font-semibold">
+                          {isEligible 
+                            ? "Refund Approved! Notice period is 30+ days. You are eligible to receive your ₹1,000 refundable deposit upon checkout." 
+                            : "Forfeited Deposit! Your notice period is less than 30 days. You will forfeit your ₹1,000 security deposit. Select a checkout date at least 30 days in the future to keep your refund."}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <DialogFooter className="mt-4 flex gap-2">
+                <DialogClose render={<Button type="button" variant="outline" className="flex-1 text-xs rounded-xl cursor-pointer" disabled={isSubmittingNotice}>Cancel</Button>} />
+                <Button 
+                  type="button" 
+                  onClick={async () => {
+                    if (!vacateDateVal) return;
+                    setIsSubmittingNotice(true);
+                    const { error } = await submitNotice(vacateDateVal);
+                    setIsSubmittingNotice(false);
+                    if (error) {
+                      alert("Error: " + error);
+                    } else {
+                      setIsVacateOpen(false);
+                    }
+                  }}
+                  disabled={!vacateDateVal || isSubmittingNotice}
+                  className="flex-1 bg-primary hover:bg-primary/95 text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  {isSubmittingNotice ? "Submitting..." : "Confirm Vacate"}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-lg font-bold flex items-center gap-2 text-amber-500">
+                  <Calendar className="size-5" />
+                  Active Vacate Notice
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 mt-1">
+                  Notice details and withdrawal options.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="flex flex-col gap-3 mt-4 text-xs font-semibold">
+                <div className="flex justify-between py-2 border-b border-slate-100/40 dark:border-slate-800/40">
+                  <span className="text-slate-400 dark:text-slate-500">Notice Submitted</span>
+                  <span className="text-slate-900 dark:text-white">
+                    {tenant.noticeDate ? new Date(tenant.noticeDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-100/40 dark:border-slate-800/40">
+                  <span className="text-slate-400 dark:text-slate-500">Planned Checkout Date</span>
+                  <span className="text-slate-900 dark:text-white font-extrabold text-amber-550">
+                    {tenant.vacateDate ? new Date(tenant.vacateDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-100/40 dark:border-slate-800/40">
+                  <span className="text-slate-400 dark:text-slate-500">Notice Duration</span>
+                  <span className="text-slate-900 dark:text-white">
+                    {tenant.vacateDate && tenant.noticeDate ? (() => {
+                      const v = new Date(tenant.vacateDate);
+                      const n = new Date(tenant.noticeDate);
+                      return `${Math.ceil((v.getTime() - n.getTime()) / (1000 * 60 * 60 * 24))} Days`;
+                    })() : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-slate-100/40 dark:border-slate-800/40">
+                  <span className="text-slate-400 dark:text-slate-500">Deposit Status</span>
+                  <span className="text-slate-900 dark:text-white">₹1,000 Refundable</span>
+                </div>
+                <div className="flex justify-between py-2">
+                  <span className="text-slate-400 dark:text-slate-500">Refund Eligibility</span>
+                  <span className={`font-black ${tenant.refundEligible ? 'text-emerald-450' : 'text-rose-455'}`}>
+                    {tenant.refundEligible ? 'Eligible (₹1,000 Refund Approved)' : 'Forfeited (Short Notice period)'}
+                  </span>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-900/60 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-850 flex gap-2.5 mt-2">
+                  <AlertTriangle className="size-4.5 text-amber-500 shrink-0 mt-0.5" />
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
+                    If you change your mind, you can withdraw this notice below. Your allocated room and bed will remain reserved.
+                  </p>
+                </div>
+              </div>
+
+              <DialogFooter className="mt-4 flex gap-2">
+                <DialogClose render={<Button type="button" variant="outline" className="flex-1 text-xs rounded-xl cursor-pointer" disabled={isSubmittingNotice}>Close</Button>} />
+                <Button 
+                  type="button" 
+                  onClick={async () => {
+                    if (!confirm("Are you sure you want to cancel your checkout notice and remain in the PG?")) return;
+                    setIsSubmittingNotice(true);
+                    const { error } = await cancelNotice();
+                    setIsSubmittingNotice(false);
+                    if (error) {
+                      alert("Error: " + error);
+                    } else {
+                      setIsVacateOpen(false);
+                    }
+                  }}
+                  disabled={isSubmittingNotice}
+                  className="flex-1 border border-rose-500/30 hover:bg-rose-500/10 text-rose-500 hover:text-rose-400 text-xs font-bold rounded-xl cursor-pointer bg-transparent shadow-none"
+                >
+                  {isSubmittingNotice ? "Cancelling..." : "Cancel Notice"}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </motion.div>

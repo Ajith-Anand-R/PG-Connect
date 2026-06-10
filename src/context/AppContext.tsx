@@ -24,6 +24,10 @@ export interface TenantInfo {
   pgUpiNumber?: string;
   pgUpiName?: string;
   pgUpiRegisteredName?: string;
+  noticeDate?: string;
+  vacateDate?: string;
+  refundEligible?: boolean;
+  status?: string;
 }
 
 export interface Menu {
@@ -146,6 +150,8 @@ interface AppContextType {
   updateMeals: (breakfast: boolean, lunch: boolean, dinner: boolean) => void;
   updateDietary: (dietary: 'Veg' | 'Non-Veg' | 'Egg') => void;
   updateProfile: (email: string, phone: string, emergencyContact: string) => Promise<{ error: string | null }>;
+  submitNotice: (vacateDate: string) => Promise<{ error: string | null }>;
+  cancelNotice: () => Promise<{ error: string | null }>;
   isLoggedIn: boolean;
   userRole: 'Tenant' | null;
   login: (emailOrPhone: string, password?: string) => Promise<{ error: string | null }>;
@@ -360,7 +366,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             pgUpiId: tenantDetails.pgs?.upi_id || '',
             pgUpiNumber: tenantDetails.pgs?.upi_number || '',
             pgUpiName: tenantDetails.pgs?.upi_name || '',
-            pgUpiRegisteredName: tenantDetails.pgs?.upi_registered_name || ''
+            pgUpiRegisteredName: tenantDetails.pgs?.upi_registered_name || '',
+            noticeDate: tenantDetails.notice_date || undefined,
+            vacateDate: tenantDetails.vacate_date || undefined,
+            refundEligible: tenantDetails.refund_eligible ?? false,
+            status: tenantDetails.status || 'active'
           };
           setTenant(tInfo);
 
@@ -978,6 +988,77 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const submitNotice = async (vacateDate: string) => {
+    if (!userId || !tenant.id) return { error: "Not logged in" };
+    try {
+      const noticeDateStr = new Date().toISOString().split('T')[0];
+      const targetVacateDate = new Date(vacateDate);
+      const today = new Date();
+      const diffTime = Math.abs(targetVacateDate.getTime() - today.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const eligible = diffDays >= 30;
+
+      const { error } = await supabase
+        .from('tenants')
+        .update({
+          status: 'notice',
+          notice_date: noticeDateStr,
+          vacate_date: vacateDate,
+          refund_eligible: eligible
+        })
+        .eq('id', parseInt(tenant.id));
+
+      if (error) throw error;
+
+      setTenant(prev => ({
+        ...prev,
+        status: 'notice',
+        noticeDate: noticeDateStr,
+        vacateDate: vacateDate,
+        refundEligible: eligible
+      }));
+
+      await fetchData(userId, tenant.email);
+      return { error: null };
+    } catch (err) {
+      console.error('Error submitting notice:', err);
+      const msg = err instanceof Error ? err.message : 'An error occurred.';
+      return { error: msg };
+    }
+  };
+
+  const cancelNotice = async () => {
+    if (!userId || !tenant.id) return { error: "Not logged in" };
+    try {
+      const { error } = await supabase
+        .from('tenants')
+        .update({
+          status: 'active',
+          notice_date: null,
+          vacate_date: null,
+          refund_eligible: false
+        })
+        .eq('id', parseInt(tenant.id));
+
+      if (error) throw error;
+
+      setTenant(prev => ({
+        ...prev,
+        status: 'active',
+        noticeDate: undefined,
+        vacateDate: undefined,
+        refundEligible: false
+      }));
+
+      await fetchData(userId, tenant.email);
+      return { error: null };
+    } catch (err) {
+      console.error('Error cancelling notice:', err);
+      const msg = err instanceof Error ? err.message : 'An error occurred.';
+      return { error: msg };
+    }
+  };
+
   const addCommunityPost = async (title: string, content: string, category: 'Marketplace' | 'Discussion', imageUrl?: string) => {
     if (!userId || !pgId) return;
     try {
@@ -1067,6 +1148,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateMeals,
       updateDietary,
       updateProfile,
+      submitNotice,
+      cancelNotice,
       isLoggedIn,
       userRole,
       login,
