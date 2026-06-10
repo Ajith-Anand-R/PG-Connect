@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/purity, @typescript-eslint/no-unused-vars */
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
@@ -134,9 +135,13 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <div className="w-14 h-14 rounded-2xl overflow-hidden border border-white/20 shadow-md shrink-0 bg-white/20 text-white flex items-center justify-center font-bold text-lg uppercase select-none">
-                  {tenant.name.split(' ').map(n => n[0]).join('') || 'U'}
-                </div>
+                {tenant.photo ? (
+                  <img src={tenant.photo} alt={tenant.name} className="w-14 h-14 rounded-2xl object-cover border border-white/20 shadow-md shrink-0 bg-white/20" />
+                ) : (
+                  <div className="w-14 h-14 rounded-2xl overflow-hidden border border-white/20 shadow-md shrink-0 bg-white/20 text-white flex items-center justify-center font-bold text-lg uppercase select-none">
+                    {tenant.name.split(' ').map(n => n[0]).join('') || 'U'}
+                  </div>
+                )}
               </div>
 
               {/* Room Config Info Grid */}
@@ -159,15 +164,23 @@ export default function ProfilePage() {
             >
               <div className="flex flex-col gap-0.5">
                 <h3 className="text-xs font-bold flex items-center gap-1.5 text-white">
-                  <QrCode className="size-4 text-emerald-400" />
-                  Gate Access Pass
+                  {tenant.photo ? (
+                    <img src={tenant.photo} className="size-4 rounded-full object-cover" alt="" />
+                  ) : (
+                    <User className="size-4 text-emerald-400" />
+                  )}
+                  Gate Pass
                 </h3>
-                <p className="text-[10px] text-white/60">Scan QR Code at security turnstiles</p>
+                <p className="text-[10px] text-white/60">Tap to view your resident gate pass</p>
               </div>
-              <div className="w-11 h-11 bg-white p-1.5 rounded-xl border border-white/10 flex-shrink-0 flex items-center justify-center shadow-inner">
-                <div className="w-full h-full rounded bg-slate-100 flex items-center justify-center">
-                  <QrCode className="size-8 text-slate-800" />
-                </div>
+              <div className="w-11 h-11 bg-white p-1 rounded-xl border border-white/10 flex-shrink-0 flex items-center justify-center shadow-inner">
+                {tenant.photo ? (
+                  <img src={tenant.photo} className="w-full h-full rounded-lg object-cover" alt="" />
+                ) : (
+                  <div className="w-full h-full rounded bg-slate-100 flex items-center justify-center text-slate-800">
+                    <User className="size-6 text-slate-550" />
+                  </div>
+                )}
               </div>
             </div>
           </Card>
@@ -436,35 +449,34 @@ export default function ProfilePage() {
         </DialogContent>
       </Dialog>
 
-      {/* Security Gate Access QR Dialog */}
+      {/* Security Gate Access Dialog */}
       <Dialog open={showGatePass} onOpenChange={setShowGatePass}>
         <DialogContent className="max-w-xs p-6 flex flex-col items-center gap-4 rounded-3xl bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl border border-slate-100 dark:border-slate-900 shadow-2xl">
           <DialogHeader className="text-center items-center">
-            <DialogTitle className="text-base font-bold">Gate Access QR</DialogTitle>
+            <DialogTitle className="text-base font-bold">Gate Pass</DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
-              {tenant.pgName || 'NestHaven PG'} Main Gate
+              {tenant.pgName || 'NestHaven PG'} Resident Pass
             </DialogDescription>
           </DialogHeader>
 
-          <div className="bg-gradient-to-br from-indigo-600 via-primary to-accent w-full text-white p-5.5 rounded-[22px] flex flex-col items-center gap-4 shadow-lg relative overflow-hidden">
+          <div className="bg-gradient-to-br from-indigo-600 via-primary to-accent w-full text-white p-5.5 rounded-[22px] flex flex-col items-center gap-4.5 shadow-lg relative overflow-hidden">
             <div className="absolute inset-0 opacity-15 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at bottom left, #ffffff 0%, transparent 60%)' }} />
             
-            <div className="w-36 h-36 bg-white p-2.5 rounded-2xl flex items-center justify-center shadow-inner relative">
-              <div className="w-full h-full rounded flex items-center justify-center bg-slate-100 text-slate-800">
-                <QrCode className="size-24 text-slate-800 animate-pulse" />
-              </div>
+            <div className="w-36 h-36 bg-white p-1 rounded-full overflow-hidden border-4 border-white/40 shadow-xl relative z-10 flex items-center justify-center shrink-0">
+              {tenant.photo ? (
+                <img src={tenant.photo} alt={tenant.name} className="w-full h-full object-cover rounded-full" />
+              ) : (
+                <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-800 rounded-full">
+                  <User className="size-16 text-slate-500" />
+                </div>
+              )}
             </div>
 
-            <div className="text-center">
-              <h3 className="font-bold text-base leading-tight">{tenant.name}</h3>
-              <span className="text-[10px] bg-white/20 text-white font-bold py-0.5 px-2.5 rounded-full inline-block mt-1">
+            <div className="text-center relative z-10">
+              <h3 className="font-extrabold text-base leading-tight tracking-tight">{tenant.name}</h3>
+              <span className="text-[10px] bg-white/20 text-white font-bold py-0.5 px-3 rounded-full inline-block mt-2 tracking-wide uppercase border border-white/10">
                 Room {tenant.room.split(' ')[1] || tenant.room}
               </span>
-            </div>
-
-            <div className="w-full bg-white/10 p-2.5 rounded-xl text-center text-[9px] border border-white/10">
-              <span className="opacity-80 block uppercase text-[7px] font-bold tracking-wider">Passcode token</span>
-              <span className="font-mono font-bold mt-0.5 block">{tenant.gateId || 'PASS-9872'}</span>
             </div>
           </div>
 

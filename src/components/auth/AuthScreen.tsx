@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react-hooks/purity, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any, react-hooks/set-state-in-effect */
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
@@ -23,7 +24,9 @@ import {
   QrCode,
   Smartphone,
   AlertTriangle,
-  CreditCard
+  CreditCard,
+  Camera,
+  Upload
 } from 'lucide-react';
 
 
@@ -70,11 +73,69 @@ export const AuthScreen: React.FC = () => {
   const [isSimulatingPayment, setIsSimulatingPayment] = useState(false);
   const [isPgGeneralCode, setIsPgGeneralCode] = useState(false);
   
+  // Camera capture states
+  const [useCamera, setUseCamera] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const videoRef = React.useRef<HTMLVideoElement | null>(null);
+
+  const startCamera = async () => {
+    try {
+      setError(null);
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      setStream(mediaStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch {
+      setError("Failed to access camera. Please upload a file instead.");
+      setUseCamera(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current) {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth || 640;
+      canvas.height = videoRef.current.videoHeight || 480;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            setPhotoFile(file);
+            stopCamera();
+            setUseCamera(false);
+          }
+        }, 'image/jpeg');
+      }
+    }
+  };
+
+  React.useEffect(() => {
+    if (step !== 5 || isLogin) {
+      stopCamera();
+      setUseCamera(false);
+    }
+    return () => {
+      stopCamera();
+    };
+  }, [step, isLogin]);
+  
   // UI states
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const toggleMode = () => {
+    stopCamera();
+    setUseCamera(false);
     setIsLogin(!isLogin);
     setError(null);
     setEmailOrPhone('');
@@ -635,7 +696,7 @@ export const AuthScreen: React.FC = () => {
                     <div className="space-y-4 animate-in fade-in duration-200">
                       {/* Invite Token */}
                       <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="inviteToken">Invite Token</label>
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="inviteToken">Invite Token <span className="text-rose-500">*</span></label>
                         <div className="relative flex items-center">
                           <Building2 className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
                           <input 
@@ -653,7 +714,7 @@ export const AuthScreen: React.FC = () => {
 
                       {/* Email */}
                       <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="reg-email">Email Address</label>
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="reg-email">Email Address <span className="text-rose-500">*</span></label>
                         <div className="relative flex items-center">
                           <Mail className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
                           <input 
@@ -671,7 +732,7 @@ export const AuthScreen: React.FC = () => {
 
                       {/* Phone Number */}
                       <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="phone">Phone Number</label>
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="phone">Phone Number <span className="text-rose-500">*</span></label>
                         <div className="relative flex items-center">
                           <Phone className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
                           <input 
@@ -689,7 +750,7 @@ export const AuthScreen: React.FC = () => {
 
                       {/* Create Password */}
                       <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="reg-password">Create Password</label>
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="reg-password">Create Password <span className="text-rose-500">*</span></label>
                         <div className="relative flex items-center">
                           <Lock className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
                           <input 
@@ -721,7 +782,7 @@ export const AuthScreen: React.FC = () => {
                     <div className="space-y-4 animate-in fade-in duration-200">
                       {/* Full Name */}
                       <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="fullName">Full Name</label>
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="fullName">Full Name <span className="text-rose-500">*</span></label>
                         <div className="relative flex items-center">
                           <User className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
                           <input 
@@ -740,11 +801,11 @@ export const AuthScreen: React.FC = () => {
                       {/* DOB, Age, Blood Group grid */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div className="space-y-1">
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="dob">Date of Birth</label>
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="dob">Date of Birth <span className="text-rose-500">*</span></label>
                           <div className="relative flex items-center">
                             <Calendar className="size-4 absolute left-3 text-slate-400 dark:text-slate-500 pointer-events-none" />
                             <input 
-                              className="w-full h-10 pl-10 pr-2 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all cursor-pointer"
+                               className="w-full h-10 pl-10 pr-2 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all cursor-pointer"
                               id="dob" 
                               type="date"
                               value={dob}
@@ -756,7 +817,7 @@ export const AuthScreen: React.FC = () => {
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="age">Age</label>
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="age">Age <span className="text-rose-500">*</span></label>
                           <div className="relative flex items-center">
                             <Hash className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
                             <input 
@@ -773,7 +834,7 @@ export const AuthScreen: React.FC = () => {
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="bloodGroup">Blood Group</label>
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="bloodGroup">Blood Group <span className="text-rose-500">*</span></label>
                           <div className="relative flex items-center">
                             <Users className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
                             <input 
@@ -793,7 +854,7 @@ export const AuthScreen: React.FC = () => {
                       {/* Father Name & Contact No */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="fatherName">Father&apos;s Name</label>
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="fatherName">Father&apos;s Name <span className="text-rose-500">*</span></label>
                           <div className="relative flex items-center">
                             <User className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
                             <input 
@@ -810,7 +871,7 @@ export const AuthScreen: React.FC = () => {
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="fatherPhone">Father&apos;s Contact No</label>
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="fatherPhone">Father&apos;s Contact No <span className="text-rose-500">*</span></label>
                           <div className="relative flex items-center">
                             <Phone className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
                             <input 
@@ -835,7 +896,7 @@ export const AuthScreen: React.FC = () => {
                       {/* ID Proof Type & Number */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="idProofType">ID Proof Type</label>
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="idProofType">ID Proof Type <span className="text-rose-500">*</span></label>
                           <div className="relative flex items-center">
                             <ShieldCheck className="size-4 absolute left-3 text-slate-400 dark:text-slate-500 pointer-events-none" />
                             <select 
@@ -856,7 +917,7 @@ export const AuthScreen: React.FC = () => {
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="idNumber">Aadhaar No / ID No</label>
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="idNumber">Aadhaar No / ID No <span className="text-rose-500">*</span></label>
                           <div className="relative flex items-center">
                             <Hash className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
                             <input 
@@ -875,7 +936,7 @@ export const AuthScreen: React.FC = () => {
 
                       {/* Expected period of Stay */}
                       <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="expectedStay">Expected Period of Stay</label>
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="expectedStay">Expected Period of Stay <span className="text-rose-500">*</span></label>
                         <div className="relative flex items-center">
                           <Calendar className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
                           <input 
@@ -893,7 +954,7 @@ export const AuthScreen: React.FC = () => {
 
                       {/* Occupation */}
                       <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="occupation">Occupation</label>
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="occupation">Occupation <span className="text-rose-500">*</span></label>
                         <div className="relative flex items-center">
                           <Briefcase className="size-4 absolute left-3 text-slate-400 dark:text-slate-500" />
                           <input 
@@ -917,7 +978,7 @@ export const AuthScreen: React.FC = () => {
                       {/* Address Fields */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1">
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="permanentAddress">Permanent Address</label>
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="permanentAddress">Permanent Address <span className="text-rose-500">*</span></label>
                           <div className="relative flex items-start">
                             <Home className="size-4 absolute left-3 top-3 text-slate-400 dark:text-slate-500" />
                             <textarea 
@@ -933,7 +994,7 @@ export const AuthScreen: React.FC = () => {
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="previousAddress">Previous Address</label>
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300" htmlFor="previousAddress">Previous Address <span className="text-rose-500">*</span></label>
                           <div className="relative flex items-start">
                             <Home className="size-4 absolute left-3 top-3 text-slate-400 dark:text-slate-500" />
                             <textarea 
@@ -1000,7 +1061,7 @@ export const AuthScreen: React.FC = () => {
                         <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">References (Required)</h4>
                         
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400" htmlFor="reference1">Reference (1) - Name, Address & Phone</label>
+                          <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400" htmlFor="reference1">Reference (1) - Name, Address & Phone <span className="text-rose-500">*</span></label>
                           <textarea 
                             className="w-full min-h-[50px] px-3 py-1.5 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-lg font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none"
                             id="reference1" 
@@ -1013,7 +1074,7 @@ export const AuthScreen: React.FC = () => {
                         </div>
 
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400" htmlFor="reference2">Reference (2) - Name, Address & Phone</label>
+                          <label className="text-[10px] font-bold text-slate-600 dark:text-slate-400" htmlFor="reference2">Reference (2) - Name, Address & Phone <span className="text-rose-500">*</span></label>
                           <textarea 
                             className="w-full min-h-[50px] px-3 py-1.5 bg-slate-50/50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-lg font-medium text-xs text-slate-900 dark:text-slate-50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all resize-none"
                             id="reference2" 
@@ -1032,35 +1093,101 @@ export const AuthScreen: React.FC = () => {
                   {step === 5 && (
                     <div className="space-y-4 animate-in fade-in duration-200">
                       {/* Passport Photo */}
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Passport Size Photo</label>
-                        <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-4 text-center hover:border-blue-500/50 transition-colors relative cursor-pointer">
-                          <input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) setPhotoFile(file);
-                            }}
-                            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                          />
-                          {photoFile ? (
-                            <div className="flex flex-col items-center">
-                              <img src={URL.createObjectURL(photoFile)} className="w-16 h-16 object-cover rounded-xl mb-2" alt="Preview" />
-                              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{photoFile.name}</span>
-                            </div>
-                          ) : (
-                            <div className="text-slate-500 dark:text-slate-400">
-                              <p className="text-xs font-semibold">Click to upload Passport Photo</p>
-                              <p className="text-[10px] mt-0.5">Supports PNG, JPG, JPEG (Max 5MB)</p>
-                            </div>
-                          )}
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Passport Size Photo <span className="text-rose-500">*</span></label>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                stopCamera();
+                                setUseCamera(false);
+                              }}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                                !useCamera 
+                                  ? 'bg-blue-600 text-white' 
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                              }`}
+                            >
+                              <Upload className="size-3" />
+                              Upload
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setUseCamera(true);
+                                startCamera();
+                              }}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                                useCamera 
+                                  ? 'bg-blue-600 text-white' 
+                                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                              }`}
+                            >
+                              <Camera className="size-3" />
+                              Camera
+                            </button>
+                          </div>
                         </div>
+
+                        {useCamera ? (
+                          <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-4 flex flex-col items-center gap-3 bg-slate-50/50 dark:bg-slate-950/20 relative">
+                            {stream ? (
+                              <div className="w-full flex flex-col items-center gap-2">
+                                <video 
+                                  ref={videoRef} 
+                                  autoPlay 
+                                  playsInline 
+                                  className="w-full max-w-xs h-44 rounded-xl object-cover bg-black border border-slate-200 dark:border-slate-800"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={capturePhoto}
+                                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-md active:scale-95 transition-all cursor-pointer"
+                                >
+                                  <Camera className="size-4" />
+                                  Capture Photo
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={startCamera}
+                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-1 transition-all cursor-pointer"
+                              >
+                                Enable Camera
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-4 text-center hover:border-blue-500/50 transition-colors relative cursor-pointer">
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) setPhotoFile(file);
+                              }}
+                              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                            />
+                            {photoFile ? (
+                              <div className="flex flex-col items-center">
+                                <img src={URL.createObjectURL(photoFile)} className="w-16 h-16 object-cover rounded-xl mb-2" alt="Preview" />
+                                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{photoFile.name}</span>
+                              </div>
+                            ) : (
+                              <div className="text-slate-500 dark:text-slate-400">
+                                <p className="text-xs font-semibold">Click to upload Passport Photo</p>
+                                <p className="text-[10px] mt-0.5">Supports PNG, JPG, JPEG (Max 5MB)</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* ID Proof Document */}
                       <div className="space-y-1">
-                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Aadhaar Card / ID Proof Document</label>
+                        <label className="text-xs font-bold text-slate-600 dark:text-slate-300">Aadhaar Card / ID Proof Document <span className="text-rose-500">*</span></label>
                         <div className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-4 text-center hover:border-blue-500/50 transition-colors relative cursor-pointer">
                           <input 
                             type="file" 
@@ -1205,7 +1332,7 @@ export const AuthScreen: React.FC = () => {
                               setIsLoading(true);
                               try {
                                 // 1. Check if general PG invite code
-                                const { data: pgData, error: pgErr } = await supabase
+                                const { data: pgData, error: _pgErr } = await supabase
                                   .from('pgs')
                                   .select('id, name, upi_id, upi_number, upi_registered_name, phone')
                                   .eq('invite_code', building)

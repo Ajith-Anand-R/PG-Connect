@@ -28,6 +28,7 @@ export interface TenantInfo {
   vacateDate?: string;
   refundEligible?: boolean;
   status?: string;
+  photo?: string;
 }
 
 export interface Menu {
@@ -399,7 +400,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             noticeDate: tenantDetails.notice_date || undefined,
             vacateDate: tenantDetails.vacate_date || undefined,
             refundEligible: tenantDetails.refund_eligible ?? false,
-            status: tenantDetails.status || 'active'
+            status: tenantDetails.status || 'active',
+            photo: userProfile.photo || ''
           };
           setTenant(tInfo);
 
