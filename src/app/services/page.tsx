@@ -50,7 +50,7 @@ const itemVariants = {
 };
 
 export default function ServicesPage() {
-  const { requests, addRequest } = useApp();
+  const { requests, addRequest, rateRequest } = useApp();
   const [activeTab, setActiveTab] = useState<'active' | 'past'>('active');
   const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
   
@@ -96,7 +96,7 @@ export default function ServicesPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) return;
-    addRequest(category, title, description, priority);
+    addRequest(category, title, description, priority, attachedImage);
     
     // Reset form
     setTitle('');
@@ -121,6 +121,7 @@ export default function ServicesPage() {
   const handleRateSubmit = () => {
     if (ratingTarget) {
       setRatings(prev => ({ ...prev, [ratingTarget]: tempRating }));
+      rateRequest(ratingTarget, tempRating);
       setRatingTarget(null);
     }
   };
@@ -224,6 +225,18 @@ export default function ServicesPage() {
                         </Badge>
                       </div>
 
+                      <div className="flex flex-col gap-2">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                          {req.description}
+                        </p>
+                        {req.photoUrl && (
+                          <div className="relative w-full h-32 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800/80">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={req.photoUrl} alt="Complaint attachment" className="w-full h-full object-cover" />
+                          </div>
+                        )}
+                      </div>
+
                       {/* Timeline */}
                       <div className="relative py-4 px-2">
                         <div className="absolute top-[21px] left-[20px] right-[20px] h-[3px] bg-slate-100 dark:bg-slate-800 rounded-full" />
@@ -289,7 +302,7 @@ export default function ServicesPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {pastRequests.map((req) => {
-                const currentRating = ratings[req.id] || 0;
+                const currentRating = ratings[req.id] || req.rating || 0;
                 
                 return (
                   <Card 
@@ -314,9 +327,15 @@ export default function ServicesPage() {
                         </Badge>
                       </div>
 
-                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                         {req.description}
                       </p>
+                      {req.photoUrl && (
+                        <div className="relative w-full h-32 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800/80">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={req.photoUrl} alt="Complaint attachment" className="w-full h-full object-cover" />
+                        </div>
+                      )}
 
                       <div className="pt-3 border-t border-slate-100/40 dark:border-slate-800/40 flex justify-between items-center mt-auto">
                         {/* Rating display */}

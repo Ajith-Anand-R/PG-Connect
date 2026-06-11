@@ -104,7 +104,11 @@ export const Nav: React.FC = () => {
           {/* User Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800 focus:outline-none transition-transform active:scale-95 flex items-center justify-center shrink-0 cursor-pointer bg-primary/10 text-primary font-bold text-xs uppercase select-none hover:ring-2 hover:ring-primary/20">
-              {tenant.name.split(' ').map(n => n[0]).join('') || 'U'}
+              {tenant.photo ? (
+                <img src={tenant.photo} alt={tenant.name} className="w-full h-full object-cover" />
+              ) : (
+                tenant.name.split(' ').map(n => n[0]).join('') || 'U'
+              )}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 glass-card mt-2">
               <DropdownMenuGroup>

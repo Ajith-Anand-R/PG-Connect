@@ -164,23 +164,17 @@ export default function ProfilePage() {
             >
               <div className="flex flex-col gap-0.5">
                 <h3 className="text-xs font-bold flex items-center gap-1.5 text-white">
-                  {tenant.photo ? (
-                    <img src={tenant.photo} className="size-4 rounded-full object-cover" alt="" />
-                  ) : (
-                    <User className="size-4 text-emerald-400" />
-                  )}
+                  <QrCode className="size-4 text-emerald-400" />
                   Gate Pass
                 </h3>
                 <p className="text-[10px] text-white/60">Tap to view your resident gate pass</p>
               </div>
-              <div className="w-11 h-11 bg-white p-1 rounded-xl border border-white/10 flex-shrink-0 flex items-center justify-center shadow-inner">
-                {tenant.photo ? (
-                  <img src={tenant.photo} className="w-full h-full rounded-lg object-cover" alt="" />
-                ) : (
-                  <div className="w-full h-full rounded bg-slate-100 flex items-center justify-center text-slate-800">
-                    <User className="size-6 text-slate-550" />
-                  </div>
-                )}
+              <div className="w-11 h-11 bg-white p-1 rounded-xl border border-white/10 flex-shrink-0 flex items-center justify-center shadow-xs select-none">
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=40x40&margin=1&data=${encodeURIComponent(tenant.gateId || 'PASS-' + tenant.id)}`} 
+                  alt="QR Preview"
+                  className="w-full h-full select-none"
+                />
               </div>
             </div>
           </Card>
@@ -459,24 +453,45 @@ export default function ProfilePage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="bg-gradient-to-br from-indigo-600 via-primary to-accent w-full text-white p-5.5 rounded-[22px] flex flex-col items-center gap-4.5 shadow-lg relative overflow-hidden">
+          <div className="bg-gradient-to-br from-indigo-600 via-primary to-accent w-full text-white p-5 rounded-[22px] flex flex-col items-center gap-4 shadow-lg relative overflow-hidden select-none">
             <div className="absolute inset-0 opacity-15 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at bottom left, #ffffff 0%, transparent 60%)' }} />
             
-            <div className="w-36 h-36 bg-white p-1 rounded-full overflow-hidden border-4 border-white/40 shadow-xl relative z-10 flex items-center justify-center shrink-0">
-              {tenant.photo ? (
-                <img src={tenant.photo} alt={tenant.name} className="w-full h-full object-cover rounded-full" />
-              ) : (
-                <div className="w-full h-full bg-slate-100 flex items-center justify-center text-slate-800 rounded-full">
-                  <User className="size-16 text-slate-500" />
-                </div>
-              )}
+            {/* Header: Avatar & Name Info */}
+            <div className="flex items-center gap-3 w-full border-b border-white/10 pb-3 relative z-10">
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/40 shrink-0 bg-white/20">
+                {tenant.photo ? (
+                  <img src={tenant.photo} alt={tenant.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center font-bold text-sm uppercase">
+                    {tenant.name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col min-w-0 text-left">
+                <h3 className="font-extrabold text-sm leading-tight truncate">{tenant.name}</h3>
+                <span className="text-[9px] text-white/70 font-semibold mt-0.5">
+                  Room {tenant.room.split(' ')[1] || tenant.room} • Bed {tenant.bed}
+                </span>
+              </div>
             </div>
 
-            <div className="text-center relative z-10">
-              <h3 className="font-extrabold text-base leading-tight tracking-tight">{tenant.name}</h3>
-              <span className="text-[10px] bg-white/20 text-white font-bold py-0.5 px-3 rounded-full inline-block mt-2 tracking-wide uppercase border border-white/10">
-                Room {tenant.room.split(' ')[1] || tenant.room}
+            {/* QR Code Container */}
+            <div className="bg-white p-3.5 rounded-2xl shadow-md relative z-10 shrink-0 my-1">
+              <img 
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&margin=4&data=${encodeURIComponent(tenant.gateId || 'PASS-' + tenant.id)}`} 
+                alt="Resident Gate Pass QR"
+                className="size-[140px] select-none"
+              />
+            </div>
+
+            {/* Bottom Pass metadata */}
+            <div className="text-center relative z-10 mt-1">
+              <span className="text-[9px] font-black uppercase tracking-widest text-emerald-350">
+                Authorized Resident Pass
               </span>
+              <p className="text-[8px] text-white/50 font-mono mt-1">
+                ID: {tenant.gateId || `NH-${tenant.id}`}
+              </p>
             </div>
           </div>
 

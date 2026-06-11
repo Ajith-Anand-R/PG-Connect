@@ -94,6 +94,109 @@ export default function PaymentsPage() {
     }, 1000);
   };
 
+  const handleDownloadReceipt = (bill: Bill) => {
+    try {
+      const { jsPDF } = require("jspdf");
+      const doc = new jsPDF();
+
+      // Brand color scheme: Slate & Teal
+      const primaryTeal = [13, 148, 136];
+      const textSlate = [15, 23, 42];
+      const textMuted = [100, 116, 139];
+
+      // Draw header band
+      doc.setFillColor(primaryTeal[0], primaryTeal[1], primaryTeal[2]);
+      doc.rect(0, 0, 210, 40, "F");
+
+      // Title
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.text("PG CONNECT", 20, 25);
+
+      // Receipt Label
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text("OFFICIAL PAYMENT RECEIPT", 140, 25);
+
+      // Receipt info block
+      doc.setTextColor(textSlate[0], textSlate[1], textSlate[2]);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("Receipt Details", 20, 55);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
+      doc.text(`Receipt ID: TXN-${bill.id.substring(0, 8).toUpperCase()}`, 20, 65);
+      doc.text(`Issue Date: ${new Date().toLocaleDateString()}`, 20, 72);
+      doc.text(`Payment Status: PAID`, 20, 79);
+
+      // Property info block
+      doc.setTextColor(textSlate[0], textSlate[1], textSlate[2]);
+      doc.setFont("helvetica", "bold");
+      doc.text("Property", 120, 55);
+
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
+      doc.text(`${tenant.pgName || 'PG Connect Residency'}`, 120, 65);
+      doc.text(`UPI ID: ${tenant.pgUpiId || 'payments@pgconnect'}`, 120, 72);
+
+      // Divider line
+      doc.setDrawColor(226, 232, 240);
+      doc.line(20, 87, 190, 87);
+
+      // Tenant details block
+      doc.setTextColor(textSlate[0], textSlate[1], textSlate[2]);
+      doc.setFont("helvetica", "bold");
+      doc.text("Tenant Information", 20, 100);
+
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
+      doc.text(`Name: ${tenant.name}`, 20, 110);
+      doc.text(`Room: ${tenant.room} (Bed: ${tenant.bed})`, 20, 117);
+      doc.text(`Email: ${tenant.email || 'N/A'}`, 20, 124);
+      doc.text(`Phone: ${tenant.phone || 'N/A'}`, 20, 131);
+
+      // Bill details table header
+      doc.setFillColor(248, 250, 252);
+      doc.rect(20, 140, 170, 10, "F");
+      
+      doc.setTextColor(textSlate[0], textSlate[1], textSlate[2]);
+      doc.setFont("helvetica", "bold");
+      doc.text("Description", 25, 146.5);
+      doc.text("Amount (INR)", 150, 146.5);
+
+      // Bill details row
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(textSlate[0], textSlate[1], textSlate[2]);
+      doc.text(`${bill.title}`, 25, 160);
+      doc.text(`Rs. ${bill.amount.toFixed(2)}`, 150, 160);
+
+      // Table line
+      doc.setDrawColor(226, 232, 240);
+      doc.line(20, 166, 190, 166);
+
+      // Total Amount
+      doc.setFont("helvetica", "bold");
+      doc.text("Total Paid:", 120, 176);
+      doc.text(`Rs. ${bill.amount.toFixed(2)}`, 150, 176);
+
+      // Footer
+      doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8);
+      doc.text("This is an electronically generated receipt and requires no physical signature.", 20, 260);
+      doc.text("Thank you for choosing PG Connect!", 20, 265);
+
+      // Save PDF
+      doc.save(`Receipt-${bill.title.replace(/\s+/g, "_")}-${bill.id.substring(0, 6)}.pdf`);
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+      alert("Failed to generate PDF. Please try again.");
+    }
+  };
+
   const getUpiUrl = (app: string, bill: Bill | null | undefined) => {
     let phoneVpa = "";
     if (tenant.pgUpiNumber) {
@@ -300,8 +403,9 @@ export default function PaymentsPage() {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="rounded-full text-slate-400 hover:text-primary active:scale-95 transition-transform"
+                    className="rounded-full text-slate-400 hover:text-primary active:scale-95 transition-transform cursor-pointer"
                     title="Download Receipt"
+                    onClick={() => handleDownloadReceipt(bill)}
                   >
                     <Download className="size-4" />
                   </Button>

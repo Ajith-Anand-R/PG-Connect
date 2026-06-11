@@ -60,6 +60,8 @@ export interface ServiceRequest {
   priority: 'Low' | 'Medium' | 'High';
   status: 'Open' | 'In Progress' | 'Resolved';
   raisedDate: string;
+  photoUrl?: string;
+  rating?: number;
 }
 
 export interface GuestPass {
@@ -165,7 +167,8 @@ interface AppContextType {
   notifications: AppNotification[];
   menuList: Menu[];
   payBill: (id: string, paymentMethod?: string) => void;
-  addRequest: (category: string, title: string, description: string, priority: 'Low' | 'Medium' | 'High') => void;
+  addRequest: (category: string, title: string, description: string, priority: 'Low' | 'Medium' | 'High', attachedImage?: string | null) => void;
+  rateRequest: (id: string, rating: number) => Promise<void> | void;
   addGuestPass: (name: string, relation: string, phone: string, date: string, entryTime: string, exitTime: string) => Promise<void> | void;
   sendChatMessage: (threadId: string, text: string) => void;
   markNotificationsAsRead: () => void;
@@ -592,14 +595,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             .order('id', { ascending: false });
 
           if (dbComplaints) {
-            setRequests(dbComplaints.map((c: { id: number; title: string; description: string | null; status: string; created_at: string }) => ({
+            setRequests(dbComplaints.map((c: any) => ({
               id: c.id.toString(),
               category: c.title.toLowerCase().includes('water') || c.title.toLowerCase().includes('leak') || c.title.toLowerCase().includes('faucet') ? 'Plumbing' : 'Maintenance',
               title: c.title,
               description: c.description || '',
-              priority: 'Medium',
+              priority: (c.severity || 'Medium') as 'Low' | 'Medium' | 'High',
               status: c.status === 'resolved' ? 'Resolved' : c.status === 'in-progress' ? 'In Progress' : 'Open',
-              raisedDate: new Date(c.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })
+              raisedDate: new Date(c.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+              photoUrl: c.photo_url || undefined,
+              rating: c.rating || undefined
             })));
           }
 
@@ -937,7 +942,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   // Add Service Request (Tenant side)
-  const addRequest = async (category: string, title: string, description: string, _priority: 'Low' | 'Medium' | 'High') => {
+  const addRequest = async (category: string, title: string, description: string, _priority: 'Low' | 'Medium' | 'High', attachedImage?: string | null) => {
     if (!userId) return;
     try {
       console.log(`Adding service request category: ${category}, priority: ${_priority}`);
@@ -949,6 +954,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .single();
 
       if (tenantDetails) {
+        let photo_url = null;
+
+        if (attachedImage) {
+          try {
+            const match = attachedImage.match(/^data:(image\/[a-z]+);base64,/);
+            const contentType = match ? match[1] : 'image/png';
+            const fileExt = contentType.split('/')[1] || 'png';
+            
+            const sliceSize = 512;
+            const byteCharacters = atob(attachedImage.split(',')[1] || attachedImage);
+            const byteArrays = [];
+
+            for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+              const slice = byteCharacters.slice(offset, offset + sliceSize);
+              const byteNumbers = new Array(slice.length);
+              for (let i = 0; i < slice.length; i++) {
+                byteNumbers[i] = slice.charCodeAt(i);
+              }
+              const byteArray = new Uint8Array(byteNumbers);
+              byteArrays.push(byteArray);
+            }
+
+            const blob = new Blob(byteArrays, { type: contentType });
+            const fileName = `complaint_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+            
+            const { error: uploadErr } = await supabase.storage
+              .from('tenant-documents')
+              .upload(`complaints/${fileName}`, blob, {
+                contentType: contentType
+              });
+
+            if (uploadErr) {
+              console.error('Failed to upload complaint image to storage:', uploadErr);
+            } else {
+              const { data: { publicUrl } } = supabase.storage
+                .from('tenant-documents')
+                .getPublicUrl(`complaints/${fileName}`);
+              photo_url = publicUrl;
+            }
+          } catch (storageErr) {
+            console.error('Error processing image upload:', storageErr);
+          }
+        }
+
         const { error } = await supabase
           .from('complaints')
           .insert({
@@ -956,13 +1005,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             pg_id: tenantDetails.pg_id,
             title: title,
             description: description,
-            status: 'pending'
+            status: 'pending',
+            severity: _priority,
+            photo_url: photo_url
           });
 
         if (error) throw error;
+        
+        await fetchData(userId, tenant.email);
       }
     } catch (err) {
       console.error('Error raising service request:', err);
+    }
+  };
+
+  // Rate Service Request (Tenant side)
+  const rateRequest = async (id: string, rating: number) => {
+    try {
+      const { error } = await supabase
+        .from('complaints')
+        .update({ rating })
+        .eq('id', parseInt(id));
+
+      if (error) throw error;
+      
+      if (userId) {
+        await fetchData(userId, tenant.email);
+      }
+    } catch (err) {
+      console.error('Error rating service request:', err);
     }
   };
 
@@ -1227,6 +1298,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addCommunityPost = async (title: string, content: string, category: 'Marketplace' | 'Discussion', imageUrl?: string) => {
     if (!userId || !pgId) return;
     try {
+      let finalImageUrl = imageUrl || null;
+
+      if (imageUrl && imageUrl.startsWith('data:')) {
+        try {
+          const match = imageUrl.match(/^data:(image\/[a-z]+);base64,/);
+          const contentType = match ? match[1] : 'image/png';
+          const fileExt = contentType.split('/')[1] || 'png';
+          
+          const sliceSize = 512;
+          const byteCharacters = atob(imageUrl.split(',')[1] || imageUrl);
+          const byteArrays = [];
+
+          for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+            const slice = byteCharacters.slice(offset, offset + sliceSize);
+            const byteNumbers = new Array(slice.length);
+            for (let i = 0; i < slice.length; i++) {
+              byteNumbers[i] = slice.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            byteArrays.push(byteArray);
+          }
+
+          const blob = new Blob(byteArrays, { type: contentType });
+          const fileName = `post_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          
+          const { error: uploadErr } = await supabase.storage
+            .from('tenant-documents')
+            .upload(`community/${fileName}`, blob, {
+              contentType: contentType
+            });
+
+          if (uploadErr) {
+            console.error('Failed to upload community post image:', uploadErr);
+          } else {
+            const { data: { publicUrl } } = supabase.storage
+              .from('tenant-documents')
+              .getPublicUrl(`community/${fileName}`);
+            finalImageUrl = publicUrl;
+          }
+        } catch (storageErr) {
+          console.error('Error processing community image upload:', storageErr);
+        }
+      }
+
       const { error } = await supabase
         .from('community_posts')
         .insert({
@@ -1236,7 +1351,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           content,
           category,
           type: category === 'Marketplace' ? 'Selling' : 'Discussion',
-          image_url: imageUrl || null
+          image_url: finalImageUrl
         });
       if (error) throw error;
       await fetchData(userId, tenant.email);
@@ -1328,6 +1443,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       menuList,
       payBill,
       addRequest,
+      rateRequest,
       addGuestPass,
       sendChatMessage,
       markNotificationsAsRead,
