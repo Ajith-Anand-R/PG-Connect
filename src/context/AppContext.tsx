@@ -425,7 +425,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             vacateDate: tenantDetails.vacate_date || undefined,
             refundEligible: tenantDetails.refund_eligible ?? false,
             status: tenantDetails.status || 'active',
-            photo: userProfile.photo || '',
+            photo: userProfile.photo || tenantDetails.photo_url || '',
             bedOccupancyStatus,
             bedOccupancyVacateDate
           };
