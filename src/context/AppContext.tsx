@@ -743,7 +743,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (session?.user) {
           setIsLoggedIn(true);
           setUserId(session.user.id);
-          await fetchData(session.user.id, session.user.email || '');
+          fetchData(session.user.id, session.user.email || '');
 
           // Setup real-time subscription for instant syncing
           sub = supabase
@@ -820,7 +820,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (session?.user) {
           setIsLoggedIn(true);
           setUserId(session.user.id);
-          await fetchData(session.user.id, session.user.email || '');
+          fetchData(session.user.id, session.user.email || '');
           setAuthLoading(false);
         } else if (event === 'SIGNED_OUT') {
           setIsLoggedIn(false);
