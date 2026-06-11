@@ -29,8 +29,8 @@ export const metadata: Metadata = {
     title: "PG Connect",
   },
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: "/icon-192.png",
+    apple: "/icon-192.png",
   },
 };
 
@@ -58,11 +58,23 @@ export default function RootLayout({
             __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function(reg) {
                     console.log('SW registered:', reg.scope);
+                    // Check for updates periodically
+                    setInterval(function() { reg.update(); }, 60 * 60 * 1000);
                   }).catch(function(err) {
                     console.log('SW registration failed:', err);
                   });
+                });
+
+                // Reload when new SW takes control
+                var refreshing = false;
+                navigator.serviceWorker.addEventListener('controllerchange', function() {
+                  if (refreshing) return;
+                  if (navigator.serviceWorker.controller) {
+                    refreshing = true;
+                    window.location.reload();
+                  }
                 });
               }
             `
