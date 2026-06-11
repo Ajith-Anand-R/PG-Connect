@@ -425,7 +425,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             vacateDate: tenantDetails.vacate_date || undefined,
             refundEligible: tenantDetails.refund_eligible ?? false,
             status: tenantDetails.status || 'active',
-            photo: userProfile.photo || tenantDetails.photo_url || '',
+            photo: (() => {
+              const url = userProfile.photo || tenantDetails.photo_url;
+              if (!url) return '';
+              const separator = url.includes('?') ? '&' : '?';
+              return `${url}${separator}t=${Date.now()}`;
+            })(),
             bedOccupancyStatus,
             bedOccupancyVacateDate
           };
