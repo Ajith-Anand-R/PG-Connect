@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   UserCheck, 
   Plus, 
-  QrCode, 
+  ShieldCheck, 
   Clock, 
   User, 
   ExternalLink,
@@ -207,7 +207,7 @@ export default function GuestPassPage() {
                 <Card className="glass-card border-dashed border-slate-205 dark:border-slate-800 bg-transparent py-10 rounded-3xl">
                   <CardContent className="flex flex-col items-center justify-center text-center p-6 gap-3">
                     <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-900 flex items-center justify-center text-slate-400">
-                      <QrCode className="size-6" />
+                      <UserCheck className="size-6" />
                     </div>
                     <div>
                       <h3 className="font-bold text-slate-900 dark:text-white text-sm">No Active Passes</h3>
@@ -260,7 +260,7 @@ export default function GuestPassPage() {
                               onClick={() => setSelectedPass(pass)}
                               className="text-indigo-600 font-bold text-xs p-0 h-auto flex items-center gap-0.5 cursor-pointer hover:underline border-0"
                             >
-                              View QR Pass <ExternalLink className="size-3" />
+                              View Entry Pass <ExternalLink className="size-3" />
                             </Button>
                           </div>
                         </CardContent>
@@ -591,7 +591,7 @@ export default function GuestPassPage() {
           {selectedPass && (
             <>
               <DialogHeader className="text-center items-center">
-                <DialogTitle className="text-base font-bold">Visitor Access QR</DialogTitle>
+                <DialogTitle className="text-base font-bold">Visitor Access Pass</DialogTitle>
                 <DialogDescription className="text-xs text-slate-500">
                   Pre-Approved Gate Entry Pass
                 </DialogDescription>
@@ -602,10 +602,11 @@ export default function GuestPassPage() {
                 {/* Pattern overlay */}
                 <div className="absolute inset-0 opacity-15 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at bottom left, #ffffff 0%, transparent 60%)' }} />
                 
-                {/* QR Display */}
-                <div className="w-36 h-36 bg-white p-2.5 rounded-2xl flex items-center justify-center shadow-inner relative z-10">
-                  <div className="w-full h-full rounded flex items-center justify-center bg-slate-100 text-slate-805">
-                    <QrCode className="size-24 text-slate-800" />
+                {/* Entry Code Display */}
+                <div className="w-full bg-white/10 border border-white/15 p-4 rounded-2xl flex flex-col items-center justify-center gap-1.5 shadow-inner relative z-10">
+                  <span className="text-[9px] uppercase tracking-widest text-white/60 font-bold">Entry Pass Code</span>
+                  <div className="text-2xl font-black text-white tracking-widest font-mono select-all">
+                    {selectedPass.qrCodeToken}
                   </div>
                 </div>
 

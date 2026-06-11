@@ -6,7 +6,7 @@ import { useApp } from '@/context/AppContext';
 import { motion } from 'framer-motion';
 import { 
   User, 
-  QrCode, 
+  ShieldCheck, 
   FileText, 
   Scale, 
   LogOut,
@@ -164,17 +164,13 @@ export default function ProfilePage() {
             >
               <div className="flex flex-col gap-0.5">
                 <h3 className="text-xs font-bold flex items-center gap-1.5 text-white">
-                  <QrCode className="size-4 text-emerald-400" />
+                  <ShieldCheck className="size-4 text-emerald-400" />
                   Gate Pass
                 </h3>
                 <p className="text-[10px] text-white/60">Tap to view your resident gate pass</p>
               </div>
-              <div className="w-11 h-11 bg-white p-1 rounded-xl border border-white/10 flex-shrink-0 flex items-center justify-center shadow-xs select-none">
-                <img 
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=40x40&margin=1&data=${encodeURIComponent(tenant.gateId || 'PASS-' + tenant.id)}`} 
-                  alt="QR Preview"
-                  className="w-full h-full select-none"
-                />
+              <div className="w-11 h-11 bg-white/10 rounded-xl border border-white/10 flex-shrink-0 flex items-center justify-center shadow-xs select-none">
+                <ShieldCheck className="size-6 text-emerald-400" />
               </div>
             </div>
           </Card>
@@ -475,13 +471,15 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* QR Code Container */}
-            <div className="bg-white p-3.5 rounded-2xl shadow-md relative z-10 shrink-0 my-1">
-              <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&margin=4&data=${encodeURIComponent(tenant.gateId || 'PASS-' + tenant.id)}`} 
-                alt="Resident Gate Pass QR"
-                className="size-[140px] select-none"
-              />
+            {/* Access Token Display */}
+            <div className="bg-white/10 border border-white/15 p-6 rounded-2xl shadow-md relative z-10 shrink-0 my-1 w-full flex flex-col items-center justify-center gap-2">
+              <ShieldCheck className="size-16 text-emerald-400 animate-pulse" />
+              <div className="text-center mt-2">
+                <span className="text-[10px] uppercase font-bold text-white/70 tracking-wider">Access Token</span>
+                <p className="text-lg font-black text-white font-mono mt-0.5 select-all">
+                  {tenant.gateId || 'PASS-' + tenant.id}
+                </p>
+              </div>
             </div>
 
             {/* Bottom Pass metadata */}

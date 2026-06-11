@@ -21,7 +21,6 @@ import {
   Users,
   Briefcase,
   Home,
-  QrCode,
   Smartphone,
   AlertTriangle,
   CreditCard,
@@ -1263,10 +1262,13 @@ export const AuthScreen: React.FC = () => {
                             </a>
                           )}
 
-                          <div className="flex items-center justify-center bg-white p-3 rounded-xl border border-slate-200 dark:border-slate-800 w-full max-w-[160px] mx-auto relative group">
-                            <QrCode className="size-32 text-slate-850" />
-                            <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 flex flex-col items-center justify-center p-2 text-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
-                              <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400">Scan QR with GPay, PhonePe or Paytm</span>
+                          <div className="flex items-center justify-center bg-slate-50 dark:bg-slate-900/60 p-4 rounded-xl border border-slate-200 dark:border-slate-800 w-full max-w-[280px] mx-auto text-center gap-2 flex-col">
+                            <Smartphone className="size-8 text-slate-400 animate-pulse" />
+                            <div>
+                              <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-md uppercase">Instant Transfer</span>
+                              <p className="text-[10px] text-slate-400 mt-1 font-semibold leading-normal">
+                                Copy the UPI ID above to complete payment from your mobile or desktop banking app.
+                              </p>
                             </div>
                           </div>
                         </div>

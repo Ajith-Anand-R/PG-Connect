@@ -11,7 +11,7 @@ import {
   Clock, 
   Sparkles, 
   LogOut, 
-  QrCode, 
+  ShieldCheck, 
   Building,
   ShieldAlert,
   Smartphone
@@ -301,7 +301,7 @@ export function UpcomingStayView() {
                   : 'border-slate-200/50 hover:bg-slate-50 text-slate-500 font-bold'
               }`}
             >
-              <QrCode className="size-6" />
+              <Smartphone className="size-6" />
               <span className="text-xs">UPI Payment</span>
             </button>
             <button
@@ -312,25 +312,40 @@ export function UpcomingStayView() {
                   : 'border-slate-200/50 hover:bg-slate-50 text-slate-500 font-bold'
               }`}
             >
-              <Smartphone className="size-6" />
+              <CreditCard className="size-6" />
               <span className="text-xs">Debit/Credit Card</span>
             </button>
           </div>
 
-          {/* UPI QR Mock */}
+          {/* UPI Transfer Details */}
           {paymentMethod === 'upi' && (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-4 flex flex-col items-center bg-slate-50 dark:bg-slate-900 border border-slate-200/40 p-4 rounded-2xl gap-3 text-center"
+              className="mt-4 flex flex-col items-center bg-slate-50 dark:bg-slate-900 border border-slate-200/40 p-4 rounded-2xl gap-3 text-center w-full"
             >
-              <div className="bg-white p-2.5 rounded-xl border flex items-center justify-center">
-                <QrCode className="size-24 text-slate-800" />
+              <div className="w-full text-left flex flex-col gap-1">
+                <span className="text-[9px] uppercase tracking-widest text-slate-400 font-bold">UPI ID</span>
+                <div className="flex items-center justify-between bg-white dark:bg-slate-955 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-800 w-full mt-0.5">
+                  <span className="text-xs font-mono font-extrabold text-slate-850 dark:text-slate-200">
+                    {tenant.pgUpiId || 'pgowner@upi'}
+                  </span>
+                  <Button
+                    onClick={() => {
+                      navigator.clipboard.writeText(tenant.pgUpiId || 'pgowner@upi');
+                      alert('UPI ID copied!');
+                    }}
+                    variant="ghost"
+                    className="h-7 text-[10px] font-bold text-primary px-2 hover:bg-primary/10 rounded-lg"
+                  >
+                    Copy
+                  </Button>
+                </div>
               </div>
               <div>
-                <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-md uppercase">BHIM UPI QR</span>
-                <p className="text-[10px] text-slate-400 mt-1.5 font-semibold leading-relaxed">
-                  Scan QR code with GPay, PhonePe, or Paytm to complete mockup payment.
+                <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-md uppercase">BHIM UPI Transfer</span>
+                <p className="text-[10px] text-slate-450 dark:text-slate-400 mt-1.5 font-semibold leading-relaxed">
+                  Transfer to the owner's UPI ID using any UPI app (GPay, PhonePe, Paytm).
                 </p>
               </div>
             </motion.div>

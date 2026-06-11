@@ -12,7 +12,8 @@ import {
   Smartphone,
   Check,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  Copy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,8 +52,9 @@ export default function PaymentsPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   
   // UPI payment steps state
-  const [paymentStep, setPaymentStep] = useState<'choose_method' | 'card_confirm' | 'upi_apps' | 'upi_qr' | 'confirm_status'>('choose_method');
+  const [paymentStep, setPaymentStep] = useState<'choose_method' | 'card_confirm' | 'upi_apps' | 'upi_details' | 'confirm_status'>('choose_method');
   const [isMobile, setIsMobile] = useState(false);
+  const [copiedUpi, setCopiedUpi] = useState(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -466,7 +468,7 @@ export default function PaymentsPage() {
                       if (isMobile) {
                         setPaymentStep('upi_apps');
                       } else {
-                        setPaymentStep('upi_qr');
+                        setPaymentStep('upi_details');
                       }
                     }}
                     className="group flex items-center justify-between p-4 rounded-2xl border border-primary/20 bg-primary/5 hover:bg-primary/10 transition-all text-left relative overflow-hidden cursor-pointer"
@@ -678,40 +680,53 @@ export default function PaymentsPage() {
                 </button>
               </motion.div>
             )}
-
-            {paymentStep === 'upi_qr' && (
+            {paymentStep === 'upi_details' && (
               <motion.div
-                key="upi_qr"
+                key="upi_details"
                 initial={{ opacity: 0, x: 15 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -15 }}
                 transition={{ type: "spring" as const, stiffness: 350, damping: 28 }}
-                className="flex flex-col items-center gap-4 text-center"
+                className="flex flex-col items-center gap-4 text-center w-full"
               >
                 <DialogHeader className="w-full flex flex-row items-center gap-2 relative">
                   <button 
                     onClick={() => setPaymentStep('choose_method')}
-                    className="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center text-slate-500 absolute -left-2 top-0 cursor-pointer"
+                    className="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center text-slate-505 absolute -left-2 top-0 cursor-pointer"
                   >
                     <ArrowLeft className="size-4" />
                   </button>
-                  <DialogTitle className="text-xl font-extrabold text-slate-900 dark:text-white pl-8 w-full text-center pr-8">Scan QR Code</DialogTitle>
+                  <DialogTitle className="text-xl font-extrabold text-slate-900 dark:text-white pl-8 w-full text-center pr-8">UPI Payment Details</DialogTitle>
                 </DialogHeader>
 
-                <DialogDescription className="text-xs text-slate-500 px-2 leading-relaxed">
-                  Scan this QR code with any UPI app on your mobile phone to complete payment.
+                <DialogDescription className="text-xs text-slate-550 dark:text-slate-400 px-2 leading-relaxed">
+                  Please transfer the exact amount using any UPI app to the address details below.
                 </DialogDescription>
 
                 {selectedBill && (
                   <div className="flex flex-col items-center gap-4 w-full">
-                    {/* QR Code Container */}
-                    <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-[0_12px_40px_rgba(0,0,0,0.06)] relative">
-                      <img 
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=${encodeURIComponent(getUpiUrl('generic', bills.find(b => b.id === selectedBill)))}`} 
-                        alt="UPI Payment QR Code"
-                        className="size-[180px] select-none"
-                      />
-                      <div className="absolute inset-0 border border-primary/20 rounded-3xl pointer-events-none" />
+                    {/* Copy Details Container */}
+                    <div className="bg-slate-50 dark:bg-slate-900 border border-slate-150 dark:border-slate-850 p-4 rounded-3xl w-full flex flex-col gap-3">
+                      <div className="flex items-center justify-between bg-white dark:bg-slate-955 p-3 rounded-2xl border border-slate-200/50 dark:border-slate-800">
+                        <div className="flex flex-col text-left">
+                          <span className="text-[9px] uppercase tracking-widest text-slate-400 font-bold">UPI ID / Address</span>
+                          <span className="text-xs font-mono font-extrabold text-slate-850 dark:text-slate-200 select-all mt-0.5">
+                            {tenant.pgUpiId || tenant.pgUpiNumber || "pgowner@upi"}
+                          </span>
+                        </div>
+                        <Button
+                          onClick={() => {
+                            navigator.clipboard.writeText(tenant.pgUpiId || tenant.pgUpiNumber || "pgowner@upi");
+                            setCopiedUpi(true);
+                            setTimeout(() => setCopiedUpi(false), 2000);
+                          }}
+                          variant="ghost"
+                          className="h-8 text-[10px] font-bold text-primary px-3 hover:bg-primary/10 rounded-xl flex items-center gap-1"
+                        >
+                          <Copy className="size-3.5" />
+                          {copiedUpi ? 'Copied' : 'Copy'}
+                        </Button>
+                      </div>
                     </div>
 
                     {/* Payee Info */}
@@ -720,12 +735,8 @@ export default function PaymentsPage() {
                         <span className="font-bold text-slate-500">Payee (Owner):</span>
                         <span className="font-extrabold text-slate-800 dark:text-slate-200">{tenant.pgUpiName || tenant.pgUpiRegisteredName || tenant.pgName || "PG Owner"}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="font-bold text-slate-500">UPI ID:</span>
-                        <span className="font-extrabold text-slate-800 dark:text-slate-200 font-mono">{tenant.pgUpiId || tenant.pgUpiNumber || "pgowner@upi"}</span>
-                      </div>
                       <div className="flex justify-between border-t border-slate-100 dark:border-slate-850 pt-2 mt-2">
-                        <span className="font-bold text-slate-505">Amount Due:</span>
+                        <span className="font-bold text-slate-500">Amount Due:</span>
                         <span className="font-black text-lg text-primary">
                           ₹{bills.find(b => b.id === selectedBill)?.amount.toFixed(2)}
                         </span>
@@ -798,7 +809,7 @@ export default function PaymentsPage() {
                       if (isMobile) {
                         setPaymentStep('upi_apps');
                       } else {
-                        setPaymentStep('upi_qr');
+                        setPaymentStep('upi_details');
                       }
                     }}
                     disabled={isProcessing}
