@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
+import { QueryProvider } from "@/providers/QueryProvider";
 import { AppContentWrapper } from "@/components/layout/AppContentWrapper";
 import dynamic from "next/dynamic";
 
@@ -55,12 +56,14 @@ export default function RootLayout({
       className={`${sansFont.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-slate-50/70 text-slate-900 flex flex-col pb-20 md:pb-0 pt-16">
-        <AppProvider>
-          <AppContentWrapper>
-            {children}
-          </AppContentWrapper>
-          <IncomingGateRequestModal />
-        </AppProvider>
+        <QueryProvider>
+          <AppProvider>
+            <AppContentWrapper>
+              {children}
+            </AppContentWrapper>
+            <IncomingGateRequestModal />
+          </AppProvider>
+        </QueryProvider>
         
         {/* PWA Service Worker Registration */}
         <script

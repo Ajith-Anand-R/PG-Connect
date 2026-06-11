@@ -88,6 +88,11 @@ export const AuthScreen: React.FC = () => {
   const [aadhaarScanStatus, setAadhaarScanStatus] = useState("Initializing scanner...");
   const [analysisResult, setAnalysisResult] = useState<any>(null);
 
+  // States for two-sided capture
+  const [aadhaarScanFrontFile, setAadhaarScanFrontFile] = useState<File | null>(null);
+  const [aadhaarScanBackFile, setAadhaarScanBackFile] = useState<File | null>(null);
+  const [aadhaarCapturePhase, setAadhaarCapturePhase] = useState<'front' | 'back'>('front');
+
   const startAadhaarScanCamera = async () => {
     try {
       setError(null);
@@ -122,10 +127,19 @@ export const AuthScreen: React.FC = () => {
         ctx.drawImage(aadhaarScanVideoRef.current, 0, 0, canvas.width, canvas.height);
         canvas.toBlob((blob) => {
           if (blob) {
-            const file = new File([blob], `aadhaar_scan_${Date.now()}.jpg`, { type: 'image/jpeg' });
-            setAadhaarScanFile(file);
-            stopAadhaarScanCamera();
-            runAadhaarScanAnalysis(file);
+            const fileName = aadhaarCapturePhase === 'front' 
+              ? `aadhaar_front_${Date.now()}.jpg` 
+              : `aadhaar_back_${Date.now()}.jpg`;
+            const file = new File([blob], fileName, { type: 'image/jpeg' });
+            
+            if (aadhaarCapturePhase === 'front') {
+              setAadhaarScanFrontFile(file);
+              setAadhaarCapturePhase('back');
+            } else {
+              setAadhaarScanBackFile(file);
+              stopAadhaarScanCamera();
+              runAadhaarScanAnalysisTwoSides(aadhaarScanFrontFile!, file);
+            }
           }
         }, 'image/jpeg');
       }
@@ -171,6 +185,118 @@ export const AuthScreen: React.FC = () => {
     }
   };
 
+  const runAadhaarScanAnalysisTwoSides = async (frontFile: File, backFile: File) => {
+    setAadhaarScanStep('scanning');
+    setAadhaarScanStatus("Preprocessing front side...");
+
+    try {
+      const { scanAadhaarCard } = await import('@/lib/aadhaar-ocr');
+      
+      // Step 1: Scan Front
+      const frontResult = await scanAadhaarCard(frontFile, (status, _progress) => {
+        setAadhaarScanStatus(`Front: ${status}`);
+      });
+
+      // Step 2: Scan Back
+      setAadhaarScanStatus("Preprocessing back side...");
+      const backResult = await scanAadhaarCard(backFile, (status, _progress) => {
+        setAadhaarScanStatus(`Back: ${status}`);
+      });
+
+      // Step 3: Stitch the two images together
+      setAadhaarScanStatus("Stitching images for ID proof...");
+      
+      const stitchImages = (): Promise<File> => {
+        return new Promise((resolve, reject) => {
+          const frontImg = new Image();
+          const backImg = new Image();
+          
+          frontImg.onload = () => {
+            backImg.onload = () => {
+              const canvas = document.createElement('canvas');
+              canvas.width = Math.max(frontImg.width, backImg.width);
+              canvas.height = frontImg.height + backImg.height + 20; // 20px gap
+
+              const ctx = canvas.getContext('2d');
+              if (!ctx) {
+                reject(new Error("Could not get 2D context"));
+                return;
+              }
+
+              // Fill background with white
+              ctx.fillStyle = '#ffffff';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+              // Draw front
+              ctx.drawImage(frontImg, (canvas.width - frontImg.width) / 2, 0);
+              
+              // Draw divider line/gap
+              ctx.fillStyle = '#e2e8f0';
+              ctx.fillRect(0, frontImg.height + 9, canvas.width, 2);
+
+              // Draw back
+              ctx.drawImage(backImg, (canvas.width - backImg.width) / 2, frontImg.height + 20);
+
+              canvas.toBlob((blob) => {
+                if (blob) {
+                  const stitchedFile = new File([blob], `aadhaar_combined_${Date.now()}.jpg`, { type: 'image/jpeg' });
+                  resolve(stitchedFile);
+                } else {
+                  reject(new Error("Blob generation failed"));
+                }
+              }, 'image/jpeg');
+            };
+            backImg.onerror = () => reject(new Error("Back image load error"));
+            backImg.src = URL.createObjectURL(backFile);
+          };
+          frontImg.onerror = () => reject(new Error("Front image load error"));
+          frontImg.src = URL.createObjectURL(frontFile);
+        });
+      };
+
+      let combinedFile: File;
+      try {
+        combinedFile = await stitchImages();
+      } catch (stitchErr) {
+        console.error("Stitching failed, falling back to front file only:", stitchErr);
+        combinedFile = frontFile;
+      }
+
+      // Merge results
+      const finalName = frontResult.name || backResult.name || '';
+      const finalAadhaar = frontResult.aadhaar || backResult.aadhaar || '';
+      const finalFormattedAadhaar = frontResult.formattedAadhaar || backResult.formattedAadhaar || '';
+      const finalDob = frontResult.dob || backResult.dob || '';
+      const finalAge = frontResult.age || backResult.age || '';
+      // Back side contains address, so prioritize it; if empty, use front address.
+      const finalAddress = backResult.address || frontResult.address || '';
+      const finalConfidence = Math.round((frontResult.confidence + backResult.confidence) / 2);
+      
+      const mockPhoto = new File([frontFile], `extracted_face_${Date.now()}.jpg`, { type: 'image/jpeg' });
+
+      setAnalysisResult({
+        name: finalName,
+        phone: '',
+        aadhaar: finalAadhaar,
+        formattedAadhaar: finalFormattedAadhaar,
+        dob: finalDob,
+        age: finalAge,
+        address: finalAddress,
+        photo: mockPhoto,
+        file: combinedFile,
+        confidence: finalConfidence,
+        rawText: `--- FRONT ---\n${frontResult.rawText}\n\n--- BACK ---\n${backResult.rawText}`,
+      });
+      
+      setAadhaarScanStep('result');
+    } catch (err) {
+      console.error("Aadhaar OCR failed:", err);
+      setAadhaarScanStatus("OCR failed. Please try with clearer images or fill details manually.");
+      setAadhaarScanStep('input');
+      setError("Could not read the Aadhaar card. Please try a clearer photo or enter details manually.");
+    }
+  };
+
   const applyAutofill = () => {
     if (analysisResult) {
       setName(analysisResult.name);
@@ -192,6 +318,9 @@ export const AuthScreen: React.FC = () => {
     setIsAadhaarScannerOpen(false);
     setAadhaarScanStep('input');
     setAadhaarScanFile(null);
+    setAadhaarScanFrontFile(null);
+    setAadhaarScanBackFile(null);
+    setAadhaarCapturePhase('front');
     setAadhaarScanUseCamera(false);
   };
 
@@ -1636,7 +1765,29 @@ export const AuthScreen: React.FC = () => {
               {/* ── Input Step ── */}
               {aadhaarScanStep === 'input' && (
                 <div className="space-y-4 animate-in fade-in duration-200">
-                  <p className="text-xs text-slate-500 dark:text-slate-400 text-center font-semibold">Take a clear photo of the Aadhaar card front side, or upload an existing image.</p>
+                  {/* Step indicator for camera capture */}
+                  {aadhaarScanUseCamera && (
+                    <div className="flex justify-center items-center gap-4 mb-2">
+                      <div className={`flex items-center gap-1 text-[11px] font-extrabold ${aadhaarCapturePhase === 'front' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-405 dark:text-slate-500'}`}>
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${aadhaarCapturePhase === 'front' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800'}`}>1</span>
+                        Front Side
+                      </div>
+                      <div className="h-0.5 w-8 bg-slate-200 dark:bg-slate-800" />
+                      <div className={`flex items-center gap-1 text-[11px] font-extrabold ${aadhaarCapturePhase === 'back' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-405 dark:text-slate-500'}`}>
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${aadhaarCapturePhase === 'back' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800'}`}>2</span>
+                        Back Side
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-slate-500 dark:text-slate-400 text-center font-semibold">
+                    {aadhaarScanUseCamera 
+                      ? (aadhaarCapturePhase === 'front' 
+                          ? "Take a clear photo of the Aadhaar card front side (contains photo and details)." 
+                          : "Take a clear photo of the Aadhaar card back side (contains address).")
+                      : "Take a clear photo of the Aadhaar card front side, or upload an existing image."
+                    }
+                  </p>
 
                   {/* Toggle camera / upload */}
                   <div className="flex gap-2 justify-center">
@@ -1644,6 +1795,9 @@ export const AuthScreen: React.FC = () => {
                       type="button"
                       onClick={() => {
                         setAadhaarScanUseCamera(true);
+                        setAadhaarCapturePhase('front');
+                        setAadhaarScanFrontFile(null);
+                        setAadhaarScanBackFile(null);
                         startAadhaarScanCamera();
                       }}
                       className={`px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
@@ -1674,6 +1828,19 @@ export const AuthScreen: React.FC = () => {
 
                   {aadhaarScanUseCamera ? (
                     <div className="border-2 border-dashed border-blue-200 dark:border-blue-800/50 rounded-2xl p-3 flex flex-col items-center gap-3 bg-slate-50/50 dark:bg-slate-950/30 relative overflow-hidden">
+                      {aadhaarScanFrontFile && aadhaarCapturePhase === 'back' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAadhaarCapturePhase('front');
+                            setAadhaarScanFrontFile(null);
+                            startAadhaarScanCamera();
+                          }}
+                          className="absolute top-2 right-2 z-10 bg-slate-900/80 dark:bg-slate-950/80 hover:bg-slate-950 text-white px-2 py-1 rounded-lg text-[9px] font-extrabold transition-all border border-slate-700/50"
+                        >
+                          ← Retake Front
+                        </button>
+                      )}
                       {aadhaarScanStream ? (
                         <>
                           <video
@@ -1690,7 +1857,7 @@ export const AuthScreen: React.FC = () => {
                             className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 shadow-md active:scale-[0.97] transition-all cursor-pointer"
                           >
                             <Camera className="size-4" />
-                            Capture & Analyze
+                            {aadhaarCapturePhase === 'front' ? 'Capture Front Side' : 'Capture Back Side & Analyze'}
                           </button>
                         </>
                       ) : (

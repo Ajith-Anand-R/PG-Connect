@@ -96,9 +96,9 @@ export default function PaymentsPage() {
     }, 1000);
   };
 
-  const handleDownloadReceipt = (bill: Bill) => {
+  const handleDownloadReceipt = async (bill: Bill) => {
     try {
-      const { jsPDF } = require("jspdf");
+      const { jsPDF } = await import("jspdf");
       const doc = new jsPDF();
 
       // Brand color scheme: Slate & Teal

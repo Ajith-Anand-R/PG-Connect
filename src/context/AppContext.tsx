@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { isRefundEligible } from '@/lib/utils';
 import * as Sentry from "@sentry/nextjs";
@@ -203,6 +204,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   console.log("AppProvider render called, window:", typeof window !== 'undefined');
+  const queryClient = useQueryClient();
   // Authentication State
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
@@ -847,6 +849,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setIncomingRequest(newLog);
           }
         }
+        queryClient.invalidateQueries({ queryKey: ['visitor-logs'] });
+        queryClient.invalidateQueries({ queryKey: ['staff-logs'] });
         fetchData(userId, tenant.email);
       })
       // 2. Listen to tenant's payments
@@ -856,6 +860,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         table: 'payments', 
         filter: `tenant_id=eq.${tenant.id}` 
       }, () => {
+        queryClient.invalidateQueries({ queryKey: ['payments'] });
         fetchData(userId, tenant.email);
       })
       // 3. Listen to tenant's complaints
@@ -865,6 +870,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         table: 'complaints', 
         filter: `tenant_id=eq.${tenant.id}` 
       }, () => {
+        queryClient.invalidateQueries({ queryKey: ['complaints'] });
         fetchData(userId, tenant.email);
       })
       // 4. Listen to notices in their PG
@@ -874,6 +880,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         table: 'notices', 
         filter: `pg_id=eq.${pgId}` 
       }, () => {
+        queryClient.invalidateQueries({ queryKey: ['notices'] });
         fetchData(userId, tenant.email);
       })
       .subscribe();
@@ -1052,6 +1059,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         if (error) throw error;
         
+        queryClient.invalidateQueries({ queryKey: ['complaints'] });
         await fetchData(userId, tenant.email);
       }
     } catch (err) {
@@ -1070,6 +1078,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (error) throw error;
       
+      queryClient.invalidateQueries({ queryKey: ['complaints'] });
       if (userId) {
         await fetchData(userId, tenant.email);
       }
@@ -1259,6 +1268,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         refundEligible: eligible
       }));
 
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
       await fetchData(userId, tenant.email);
       return { error: null };
     } catch (err) {
@@ -1291,6 +1301,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         refundEligible: false
       }));
 
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
       await fetchData(userId, tenant.email);
       return { error: null };
     } catch (err) {
@@ -1327,6 +1338,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (bedUpdateErr) throw bedUpdateErr;
       }
 
+      queryClient.invalidateQueries({ queryKey: ['payments'] });
       await fetchData(userId, tenant.email);
       return { error: null };
     } catch (err) {
@@ -1395,6 +1407,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           image_url: finalImageUrl
         });
       if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['community-feed'] });
       await fetchData(userId, tenant.email);
     } catch (err) {
       console.error('Error adding community post:', err);
@@ -1427,6 +1440,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           });
         if (error) throw error;
       }
+      queryClient.invalidateQueries({ queryKey: ['community-feed'] });
       await fetchData(userId, tenant.email);
     } catch (err) {
       console.error('Error liking community post:', err);
@@ -1444,6 +1458,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           text
         });
       if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['community-feed'] });
       await fetchData(userId, tenant.email);
     } catch (err) {
       console.error('Error adding community comment:', err);
@@ -1459,6 +1474,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       if (error) throw error;
       setIncomingRequest((prev: any) => prev && prev.id.toString() === logId ? null : prev);
+      queryClient.invalidateQueries({ queryKey: ['visitor-logs'] });
       if (userId) {
         await fetchData(userId, tenant.email);
       }
