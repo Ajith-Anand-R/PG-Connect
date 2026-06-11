@@ -3,11 +3,17 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AppProvider } from "@/context/AppContext";
 import { AppContentWrapper } from "@/components/layout/AppContentWrapper";
-import { IncomingGateRequestModal } from "@/components/IncomingGateRequestModal";
+import dynamic from "next/dynamic";
+
+// Lazy-load gate request modal — only needed when a gate request comes in
+const IncomingGateRequestModal = dynamic(
+  () => import("@/components/IncomingGateRequestModal").then(mod => ({ default: mod.IncomingGateRequestModal }))
+);
 
 const sansFont = Plus_Jakarta_Sans({
   subsets: ["latin"],
   variable: "--font-sans",
+  display: "swap",  // Prevent FOIT (Flash of Invisible Text)
 });
 
 export const viewport: Viewport = {
@@ -64,10 +70,14 @@ export default function RootLayout({
                 window.addEventListener('load', function() {
                   navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function(reg) {
                     console.log('SW registered:', reg.scope);
-                    // Check for updates periodically
+                    // Check for updates every hour
                     setInterval(function() { reg.update(); }, 60 * 60 * 1000);
                   }).catch(function(err) {
                     console.log('SW registration failed:', err);
+                  });
+                  // Auto-reload when new SW takes over
+                  navigator.serviceWorker.addEventListener('controllerchange', function() {
+                    window.location.reload();
                   });
                 });
               }

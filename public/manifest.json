@@ -2,11 +2,18 @@
   "name": "PG Connect",
   "short_name": "PGConnect",
   "description": "Premium PG & Tenant Management Portal",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#f9f9ff",
   "theme_color": "#0052cc",
   "orientation": "portrait",
+  "categories": ["business", "utilities"],
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
   "icons": [
     {
       "src": "/icon-192.png",
