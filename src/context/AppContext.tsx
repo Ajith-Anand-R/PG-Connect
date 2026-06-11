@@ -3,6 +3,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { isRefundEligible } from '@/lib/utils';
+import * as Sentry from "@sentry/nextjs";
+
 
 const DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -724,6 +726,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     } catch (err) {
       console.error('Error synchronizing data:', err);
+      Sentry.captureException(err);
     }
   }, []);
 
@@ -889,9 +892,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         password: password || 'password123',
       });
       console.log("Supabase signInWithPassword result error:", error);
+      if (error) {
+        Sentry.captureException(new Error(`Login error: ${error.message}`));
+      }
       return { error: error ? error.message : null };
     } catch (err) {
       console.log("Supabase signInWithPassword threw exception:", err);
+      Sentry.captureException(err);
       const errorMsg = err instanceof Error ? err.message : 'An error occurred during login.';
       return { error: errorMsg };
     }
@@ -929,8 +936,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         }
       });
+      if (error) {
+        Sentry.captureException(new Error(`Registration error: ${error.message}`));
+      }
       return { error: error ? error.message : null };
     } catch (err) {
+      Sentry.captureException(err);
       const errorMsg = err instanceof Error ? err.message : 'An error occurred during registration.';
       return { error: errorMsg };
     }
@@ -964,6 +975,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ]);
     } catch (err) {
       console.error('Error paying bill:', err);
+      Sentry.captureException(err);
     }
   };
 
@@ -1013,6 +1025,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
             if (uploadErr) {
               console.error('Failed to upload complaint image to storage:', uploadErr);
+              Sentry.captureException(uploadErr);
             } else {
               const { data: { publicUrl } } = supabase.storage
                 .from('tenant-documents')
@@ -1021,6 +1034,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             }
           } catch (storageErr) {
             console.error('Error processing image upload:', storageErr);
+            Sentry.captureException(storageErr);
           }
         }
 
@@ -1042,6 +1056,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch (err) {
       console.error('Error raising service request:', err);
+      Sentry.captureException(err);
     }
   };
 
@@ -1060,6 +1075,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch (err) {
       console.error('Error rating service request:', err);
+      Sentry.captureException(err);
     }
   };
 
@@ -1094,6 +1110,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch (err) {
       console.error('Error adding guest pass:', err);
+      Sentry.captureException(err);
     }
   };
 
