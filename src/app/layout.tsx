@@ -70,16 +70,6 @@ export default function RootLayout({
                     console.log('SW registration failed:', err);
                   });
                 });
-
-                // Reload when new SW takes control
-                var refreshing = false;
-                navigator.serviceWorker.addEventListener('controllerchange', function() {
-                  if (refreshing) return;
-                  if (navigator.serviceWorker.controller) {
-                    refreshing = true;
-                    window.location.reload();
-                  }
-                });
               }
             `
           }}
