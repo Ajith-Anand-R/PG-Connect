@@ -132,59 +132,43 @@ export const AuthScreen: React.FC = () => {
     }
   };
 
-  const runAadhaarScanAnalysis = (file: File) => {
+  const runAadhaarScanAnalysis = async (file: File) => {
     setAadhaarScanStep('scanning');
-    setAadhaarScanStatus("Locating Aadhaar card document...");
-    
-    setTimeout(() => {
-      setAadhaarScanStatus("Performing OCR character extraction...");
-      setTimeout(() => {
-        setAadhaarScanStatus("Detecting holder's face profile...");
-        setTimeout(() => {
-          setAadhaarScanStatus("Verifying secure digital signatures...");
-          setTimeout(() => {
-            const names = ["Rahul Sharma", "Aditya Sen", "Amit Patel", "Vikram Malhotra", "Priya Nair"];
-            const selectedName = names[Math.floor(Math.random() * names.length)];
-            
-            const phones = ["9876543210", "9945671230", "9123456789", "8877665544"];
-            const selectedPhone = phones[Math.floor(Math.random() * phones.length)];
-            
-            const randomAadhaar = "5489" + Math.floor(10000000 + Math.random() * 90000000);
-            const formattedAadhaar = randomAadhaar.replace(/(\d{4})(\d{4})(\d{4})/, "$1-$2-$3");
+    setAadhaarScanStatus("Preprocessing image for optimal clarity...");
 
-            const dobs = ["1995-08-12", "1998-04-23", "2000-11-05", "1992-01-30"];
-            const selectedDob = dobs[Math.floor(Math.random() * dobs.length)];
-            
-            const addresses = [
-              "Flat 402, Block A, Prestige Heights, Outer Ring Road, Bengaluru, Karnataka - 560103",
-              "House 12, Sector 15, Gurgaon, Haryana - 122001",
-              "Plot 88, Road No 4, Jubilee Hills, Hyderabad, Telangana - 560033",
-              "Apt 501, Sunrise Towers, Prabhadevi, Mumbai, Maharashtra - 400025"
-            ];
-            const selectedAddress = addresses[Math.floor(Math.random() * addresses.length)];
+    try {
+      const { scanAadhaarCard } = await import('@/lib/aadhaar-ocr');
+      
+      const result = await scanAadhaarCard(file, (status, _progress) => {
+        setAadhaarScanStatus(status);
+      });
 
-            const birthYear = new Date(selectedDob).getFullYear();
-            const currentYear = new Date().getFullYear();
-            const calculatedAge = String(currentYear - birthYear);
+      // Use OCR results, but provide fallback placeholders if fields are empty
+      const aadhaarNumber = result.aadhaar || '';
+      const formattedAadhaar = result.formattedAadhaar || '';
 
-            const mockPhoto = new File([file], `extracted_face_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      const mockPhoto = new File([file], `extracted_face_${Date.now()}.jpg`, { type: 'image/jpeg' });
 
-            setAnalysisResult({
-              name: selectedName,
-              phone: selectedPhone,
-              aadhaar: randomAadhaar,
-              formattedAadhaar,
-              dob: selectedDob,
-              age: calculatedAge,
-              address: selectedAddress,
-              photo: mockPhoto,
-              file: file
-            });
-            setAadhaarScanStep('result');
-          }, 600);
-        }, 600);
-      }, 650);
-    }, 650);
+      setAnalysisResult({
+        name: result.name || '',
+        phone: '',  // Phone is not printed on Aadhaar cards
+        aadhaar: aadhaarNumber,
+        formattedAadhaar,
+        dob: result.dob || '',
+        age: result.age || '',
+        address: result.address || '',
+        photo: mockPhoto,
+        file: file,
+        confidence: result.confidence,
+        rawText: result.rawText,
+      });
+      setAadhaarScanStep('result');
+    } catch (err) {
+      console.error("Aadhaar OCR failed:", err);
+      setAadhaarScanStatus("OCR failed. Please try with a clearer image or fill in details manually.");
+      setAadhaarScanStep('input');
+      setError("Could not read the Aadhaar card. Please try a clearer photo or enter details manually.");
+    }
   };
 
   const applyAutofill = () => {
@@ -1774,30 +1758,43 @@ export const AuthScreen: React.FC = () => {
               {/* ── Result Step ── */}
               {aadhaarScanStep === 'result' && analysisResult && (
                 <div className="space-y-4 animate-in fade-in duration-200">
-                  {/* Success banner */}
+                  {/* Success banner with confidence */}
                   <div className="bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 rounded-2xl p-3 flex items-center gap-2.5">
                     <div className="size-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                       <Check className="size-4.5 stroke-[3px]" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <p className="text-xs font-extrabold text-emerald-700 dark:text-emerald-300">Document Analyzed Successfully</p>
-                      <p className="text-[9px] text-emerald-600/70 dark:text-emerald-400/60 font-semibold">6 fields extracted • Ready to autofill</p>
+                      <p className="text-[9px] text-emerald-600/70 dark:text-emerald-400/60 font-semibold">
+                        OCR Confidence: {Math.round(analysisResult.confidence || 0)}% • Fields extracted from image
+                      </p>
                     </div>
                   </div>
+
+                  {/* Low confidence warning */}
+                  {analysisResult.confidence && analysisResult.confidence < 60 && (
+                    <div className="bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 rounded-xl p-2.5 flex items-start gap-2">
+                      <AlertTriangle className="size-3.5 text-amber-500 shrink-0 mt-0.5" />
+                      <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 leading-relaxed">
+                        Low confidence scan. Please verify extracted details carefully and correct any errors after autofilling.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Extracted data preview */}
                   <div className="bg-slate-50/60 dark:bg-slate-950/30 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 space-y-2">
                     {[
                       { label: 'Full Name', value: analysisResult.name },
                       { label: 'Aadhaar No', value: analysisResult.formattedAadhaar },
-                      { label: 'Date of Birth', value: new Date(analysisResult.dob).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) },
-                      { label: 'Age', value: analysisResult.age + ' years' },
-                      { label: 'Phone', value: analysisResult.phone },
+                      { label: 'Date of Birth', value: analysisResult.dob ? new Date(analysisResult.dob).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '' },
+                      { label: 'Age', value: analysisResult.age ? analysisResult.age + ' years' : '' },
                       { label: 'Address', value: analysisResult.address },
                     ].map((item) => (
                       <div key={item.label} className="flex justify-between items-start gap-3 py-1.5 border-b border-slate-100/80 dark:border-slate-800/60 last:border-0">
                         <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0 w-20">{item.label}</span>
-                        <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 text-right leading-snug">{item.value}</span>
+                        <span className={`text-[11px] font-bold text-right leading-snug ${item.value ? 'text-slate-800 dark:text-slate-200' : 'text-slate-300 dark:text-slate-600 italic'}`}>
+                          {item.value || 'Not detected'}
+                        </span>
                       </div>
                     ))}
                   </div>
