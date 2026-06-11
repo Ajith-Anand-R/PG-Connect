@@ -29,7 +29,11 @@ export const metadata: Metadata = {
     title: "PG Connect",
   },
   icons: {
-    icon: "/icon-192.png",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" }
+    ],
+    shortcut: "/favicon.ico",
     apple: "/icon-192.png",
   },
 };

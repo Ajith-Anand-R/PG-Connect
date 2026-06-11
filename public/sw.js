@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'pgconnect-v7';
+const CACHE_VERSION = 'pgconnect-v8';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const FONT_CACHE = `${CACHE_VERSION}-fonts`;
@@ -8,7 +8,9 @@ const STATIC_ASSETS = [
   '/manifest.json',
   '/logo.png',
   '/icon-192.png',
-  '/icon-512.png'
+  '/icon-512.png',
+  '/favicon.ico',
+  '/favicon.png'
 ];
 
 const MAX_DYNAMIC_CACHE = 60;
