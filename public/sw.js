@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'pgconnect-v6';
+const CACHE_VERSION = 'pgconnect-v7';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 const FONT_CACHE = `${CACHE_VERSION}-fonts`;
