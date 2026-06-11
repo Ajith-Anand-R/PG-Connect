@@ -25,15 +25,6 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: '/:all*(svg|jpg|jpeg|png|webp|avif|gif|ico|woff|woff2)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-      {
         source: '/_next/static/:path*',
         headers: [
           {
@@ -43,11 +34,29 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        source: '/(logo.png|icon-192.png|icon-512.png|favicon.ico|favicon.png)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
+        ],
+      },
+      {
         source: '/manifest.json',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=86400',
+            value: 'public, max-age=0, must-revalidate',
+          },
+        ],
+      },
+      {
+        source: '/sw.js',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
           },
         ],
       },
