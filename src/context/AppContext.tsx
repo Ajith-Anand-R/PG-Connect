@@ -1194,7 +1194,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const noticeDateStr = new Date().toISOString().split('T')[0];
       const targetVacateDate = new Date(vacateDate);
       const today = new Date();
-      const diffTime = Math.abs(targetVacateDate.getTime() - today.getTime());
+      
+      // Calculate calendar days by normalizing to date-only UTC midnight to ignore time-of-day/timezone discrepancies
+      const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+      const targetUTC = Date.UTC(targetVacateDate.getUTCFullYear(), targetVacateDate.getUTCMonth(), targetVacateDate.getUTCDate());
+      
+      const diffTime = targetUTC - todayUTC;
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       const eligible = diffDays >= 30;
 

@@ -539,10 +539,11 @@ export default function ProfilePage() {
                 </div>
 
                 {vacateDateVal && (() => {
-                  const target = new Date(vacateDateVal);
+                  const targetVacateDate = new Date(vacateDateVal);
                   const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  const diffTime = target.getTime() - today.getTime();
+                  const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+                  const targetUTC = Date.UTC(targetVacateDate.getUTCFullYear(), targetVacateDate.getUTCMonth(), targetVacateDate.getUTCDate());
+                  const diffTime = targetUTC - todayUTC;
                   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
                   const isEligible = diffDays >= 30;
 
