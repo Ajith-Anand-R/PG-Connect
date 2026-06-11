@@ -148,7 +148,7 @@ export const AuthScreen: React.FC = () => {
 
   const runAadhaarScanAnalysis = async (file: File) => {
     setAadhaarScanStep('scanning');
-    setAadhaarScanStatus("Preprocessing image for optimal clarity...");
+    setAadhaarScanStatus("Preprocessing image with multiple pipelines...");
 
     try {
       const { scanAadhaarCard } = await import('@/lib/aadhaar-ocr');
@@ -157,7 +157,6 @@ export const AuthScreen: React.FC = () => {
         setAadhaarScanStatus(status);
       });
 
-      // Use OCR results, but provide fallback placeholders if fields are empty
       const aadhaarNumber = result.aadhaar || '';
       const formattedAadhaar = result.formattedAadhaar || '';
 
@@ -165,7 +164,7 @@ export const AuthScreen: React.FC = () => {
 
       setAnalysisResult({
         name: result.name || '',
-        phone: '',  // Phone is not printed on Aadhaar cards
+        phone: result.phone || '',
         aadhaar: aadhaarNumber,
         formattedAadhaar,
         dob: result.dob || '',
@@ -262,21 +261,24 @@ export const AuthScreen: React.FC = () => {
         combinedFile = frontFile;
       }
 
-      // Merge results
+      // Merge results — pick the best non-empty value from each side
       const finalName = frontResult.name || backResult.name || '';
       const finalAadhaar = frontResult.aadhaar || backResult.aadhaar || '';
       const finalFormattedAadhaar = frontResult.formattedAadhaar || backResult.formattedAadhaar || '';
       const finalDob = frontResult.dob || backResult.dob || '';
       const finalAge = frontResult.age || backResult.age || '';
-      // Back side contains address, so prioritize it; if empty, use front address.
-      const finalAddress = backResult.address || frontResult.address || '';
+      const finalPhone = frontResult.phone || backResult.phone || '';
+      // Back side contains address, so prioritize it; prefer longer (more complete) address
+      const finalAddress = (backResult.address && backResult.address.length > (frontResult.address?.length || 0))
+        ? backResult.address
+        : (frontResult.address || backResult.address || '');
       const finalConfidence = Math.round((frontResult.confidence + backResult.confidence) / 2);
       
       const mockPhoto = new File([frontFile], `extracted_face_${Date.now()}.jpg`, { type: 'image/jpeg' });
 
       setAnalysisResult({
         name: finalName,
-        phone: '',
+        phone: finalPhone,
         aadhaar: finalAadhaar,
         formattedAadhaar: finalFormattedAadhaar,
         dob: finalDob,
@@ -299,12 +301,26 @@ export const AuthScreen: React.FC = () => {
 
   const applyAutofill = () => {
     if (analysisResult) {
-      setName(analysisResult.name);
-      setPhone(analysisResult.phone);
-      setIdNumber(analysisResult.aadhaar);
-      setDob(analysisResult.dob);
-      setAge(analysisResult.age);
-      setPermanentAddress(analysisResult.address);
+      // Always override name with Aadhaar-extracted name (authoritative source)
+      if (analysisResult.name) {
+        setName(analysisResult.name);
+      }
+      // Fill phone if extracted (or keep existing)
+      if (analysisResult.phone) {
+        setPhone(analysisResult.phone);
+      }
+      if (analysisResult.aadhaar) {
+        setIdNumber(analysisResult.aadhaar);
+      }
+      if (analysisResult.dob) {
+        setDob(analysisResult.dob);
+      }
+      if (analysisResult.age) {
+        setAge(analysisResult.age);
+      }
+      if (analysisResult.address) {
+        setPermanentAddress(analysisResult.address);
+      }
       setIdProofFile(analysisResult.file);
       if (!photoFile) {
         setPhotoFile(analysisResult.photo);
@@ -1949,17 +1965,18 @@ export const AuthScreen: React.FC = () => {
                   )}
 
                   {/* Extracted data preview */}
-                  <div className="bg-slate-50/60 dark:bg-slate-950/30 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 space-y-2">
+                  <div className="bg-slate-50/60 dark:bg-slate-950/30 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 space-y-0">
                     {[
                       { label: 'Full Name', value: analysisResult.name },
+                      { label: 'Phone', value: analysisResult.phone ? analysisResult.phone.replace(/(\d{5})(\d{5})/, '$1 $2') : '' },
                       { label: 'Aadhaar No', value: analysisResult.formattedAadhaar },
                       { label: 'Date of Birth', value: analysisResult.dob ? new Date(analysisResult.dob).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '' },
                       { label: 'Age', value: analysisResult.age ? analysisResult.age + ' years' : '' },
                       { label: 'Address', value: analysisResult.address },
                     ].map((item) => (
-                      <div key={item.label} className="flex justify-between items-start gap-3 py-1.5 border-b border-slate-100/80 dark:border-slate-800/60 last:border-0">
-                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider shrink-0 w-20">{item.label}</span>
-                        <span className={`text-[11px] font-bold text-right leading-snug ${item.value ? 'text-slate-800 dark:text-slate-200' : 'text-slate-300 dark:text-slate-600 italic'}`}>
+                      <div key={item.label} className="flex justify-between items-start gap-3 py-2 border-b border-slate-100/80 dark:border-slate-800/60 last:border-0">
+                        <span className="text-[10px] font-bold text-blue-500/70 dark:text-blue-400/60 uppercase tracking-wider shrink-0 w-24">{item.label}</span>
+                        <span className={`text-[11px] font-semibold text-right leading-relaxed max-w-[220px] ${item.value ? 'text-slate-800 dark:text-slate-200' : 'text-slate-300 dark:text-slate-600 italic'}`}>
                           {item.value || 'Not detected'}
                         </span>
                       </div>
