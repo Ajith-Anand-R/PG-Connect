@@ -5,6 +5,7 @@ const FONT_CACHE = `${CACHE_VERSION}-fonts`;
 const IMAGE_CACHE = `${CACHE_VERSION}-images`;
 
 const STATIC_ASSETS = [
+  '/',
   '/manifest.json',
   '/logo.png',
   '/icon-192.png',
@@ -66,8 +67,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  // Skip non-same-origin requests
-  if (!event.request.url.startsWith(self.location.origin)) return;
+  // Skip non-same-origin requests (except Google Fonts)
+  if (!event.request.url.startsWith(self.location.origin) && 
+      url.hostname !== 'fonts.googleapis.com' && 
+      url.hostname !== 'fonts.gstatic.com') {
+    return;
+  }
 
   // Skip Next.js internals and RSC data fetches
   if (url.pathname.startsWith('/_next/data/') || url.searchParams.has('_rsc')) {

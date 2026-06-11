@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { isRefundEligible } from '@/lib/utils';
 
 const DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -728,7 +729,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Monitor Supabase Auth state changes
   useEffect(() => {
-    let sub: ReturnType<typeof supabase.channel> | null = null;
     let msgSub: ReturnType<typeof supabase.channel> | null = null;
     let subscription: { unsubscribe: () => void } | null = null;
 
@@ -745,33 +745,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setUserId(session.user.id);
           fetchData(session.user.id, session.user.email || '');
 
-          // Setup real-time subscription for instant syncing
-          sub = supabase
-            .channel('schema-db-changes')
-            .on('postgres_changes', { event: '*', schema: 'public' }, async (payload) => {
-              if (payload.table === 'messages') return;
-
-              // Check if unexpected visitor is pending approval
-              if (payload.table === 'visitor_logs' && (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE')) {
-                const newLog = payload.new;
-                if (newLog && newLog.approval_status === 'pending') {
-                  // Verify this tenant is the host
-                  const { data: tenantDetails } = await supabase
-                    .from('tenants')
-                    .select('id')
-                    .eq('user_id', session.user.id)
-                    .single();
-                  if (tenantDetails && Number(newLog.tenant_id) === Number(tenantDetails.id)) {
-                    setIncomingRequest(newLog);
-                  }
-                }
-              }
-
-              fetchData(session.user.id, session.user.email || '');
-            })
-            .subscribe();
-
-          // Setup real-time subscription for messages only
+          // Setup real-time subscription for messages only (filtered by pg_id via database RLS)
           msgSub = supabase
             .channel('realtime-messages')
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
@@ -827,9 +801,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setUserId(null);
           setUserRole(null);
           setAuthLoading(false);
-          if (sub) {
-            supabase.removeChannel(sub);
-          }
           if (msgSub) {
             supabase.removeChannel(msgSub);
           }
@@ -845,14 +816,69 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (subscription) {
         subscription.unsubscribe();
       }
-      if (sub) {
-        supabase.removeChannel(sub);
-      }
       if (msgSub) {
         supabase.removeChannel(msgSub);
       }
     };
   }, [fetchData]);
+
+  // Setup targeted real-time subscriptions for tenant details, payments, complaints, and notices
+  useEffect(() => {
+    if (!userId || !tenant.id || !pgId) return;
+
+    console.log("Setting up targeted real-time subscriptions for tenant:", tenant.id, "and PG:", pgId);
+
+    const channel = supabase
+      .channel('tenant-realtime-sync')
+      // 1. Listen to tenant's own visitor logs (gate passes / visitor approvals)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'visitor_logs', 
+        filter: `tenant_id=eq.${tenant.id}` 
+      }, (payload) => {
+        console.log("Real-time visitor log change:", payload);
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          const newLog = payload.new;
+          if (newLog && newLog.approval_status === 'pending') {
+            setIncomingRequest(newLog);
+          }
+        }
+        fetchData(userId, tenant.email);
+      })
+      // 2. Listen to tenant's payments
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'payments', 
+        filter: `tenant_id=eq.${tenant.id}` 
+      }, () => {
+        fetchData(userId, tenant.email);
+      })
+      // 3. Listen to tenant's complaints
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'complaints', 
+        filter: `tenant_id=eq.${tenant.id}` 
+      }, () => {
+        fetchData(userId, tenant.email);
+      })
+      // 4. Listen to notices in their PG
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'notices', 
+        filter: `pg_id=eq.${pgId}` 
+      }, () => {
+        fetchData(userId, tenant.email);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, tenant.id, pgId, tenant.email, fetchData]);
 
   // Sign-in
   const login = async (emailOrPhone: string, password?: string) => {
@@ -1192,16 +1218,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!userId || !tenant.id) return { error: "Not logged in" };
     try {
       const noticeDateStr = new Date().toISOString().split('T')[0];
-      const targetVacateDate = new Date(vacateDate);
-      const today = new Date();
-      
-      // Calculate calendar days by normalizing to date-only UTC midnight to ignore time-of-day/timezone discrepancies
-      const todayUTC = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
-      const targetUTC = Date.UTC(targetVacateDate.getUTCFullYear(), targetVacateDate.getUTCMonth(), targetVacateDate.getUTCDate());
-      
-      const diffTime = targetUTC - todayUTC;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      const eligible = diffDays >= 30;
+            const today = new Date();
+      const eligible = isRefundEligible(today, vacateDate);
+
 
       const { error } = await supabase
         .from('tenants')
