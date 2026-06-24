@@ -260,15 +260,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const fetchData = useCallback(async (uid: string, email: string) => {
     try {
       // 1. Fetch user profile
-      const { data: userProfile, error: profileErr } = await supabase
+      let { data: userProfile, error: profileErr } = await supabase
         .from('users')
         .select('*')
         .eq('id', uid)
-        .single();
+        .maybeSingle();
 
-      if (profileErr || !userProfile) {
-        console.error('Error fetching user profile:', profileErr);
-        return;
+      if (!userProfile) {
+        // Re-create user profile if it's missing (e.g. truncated public.users)
+        const { data: { session } } = await supabase.auth.getSession();
+        const metadata = session?.user?.user_metadata || {};
+        const { data: newProfile, error: insertError } = await supabase
+          .from('users')
+          .insert({
+            id: uid,
+            name: metadata.name || metadata.full_name || email.split("@")[0] || "Tenant",
+            email: email,
+            phone: metadata.phone || "",
+            role: "Tenant", // In PG Connect, the user must be a Tenant
+            photo: metadata.avatar_url || null
+          })
+          .select()
+          .maybeSingle();
+        
+        if (newProfile) {
+          userProfile = newProfile;
+        } else {
+          console.error('Error fetching/recreating user profile:', profileErr || insertError);
+          return;
+        }
       }
 
       const role = userProfile.role;
